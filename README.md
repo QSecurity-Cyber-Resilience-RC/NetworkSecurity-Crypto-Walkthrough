@@ -1,97 +1,81 @@
 # Cryptography, worked step by step
 
-An interactive, single page visual walkthrough of five core cryptography topics, built for a Network Security course. Each topic comes with five real, fully verified worked examples that animate one step at a time, so students can follow every number by hand.
+A hands-on tool for seeing how five core pieces of cryptography actually work, one step at a time. There is nothing to install and no account to make. You open it in a web browser and click through real examples, watching every number appear as it is calculated.
 
-Topics: **finding primitive roots, Diffie-Hellman key exchange, RSA, DES, and AES.**
+**Open the walkthrough here:** <!-- your instructor will paste the class link on this line -->
+
+If you were given a copy of the files instead of a link, just double-click `index.html` and it opens in your browser.
 
 ![Preview of the walkthrough](assets/preview.svg)
 
-## Live demo
+## What is inside
 
-After you enable GitHub Pages (steps below), the site is served at:
+Five topics, each with five real worked examples that you step through:
 
-```
-https://<your-username>.github.io/<your-repo-name>/
-```
+- **Primitive roots.** The starting idea behind Diffie-Hellman: for a prime number, find the one special value whose powers cycle through every possible remainder.
+- **Diffie-Hellman.** How two people who have never met can agree on a shared secret while everyone is listening.
+- **RSA.** How a public key can lock a message that only the matching private key can open.
+- **DES.** An older block cipher, shown here because it teaches the Feistel structure very clearly.
+- **AES.** The block cipher in real use today, shown as its 4 by 4 grid of bytes moving through ten rounds.
 
-## What it covers
+## How to move around
 
-| Section | Examples | What the student sees |
-| --- | --- | --- |
-| Primitive root | 5 primes (11, 17, 23, 29, 37) | Factor p-1, apply the order test to g = 2, 3, ..., watch a live residue grid light up. A failing candidate covers only part of the group; the primitive root sweeps all of it. Then verify the full cycle, count roots as phi(p-1), and list them. |
-| Diffie-Hellman | 5 exchanges | Two parties build a shared secret over an open channel while an eavesdropper watches. The generator g is a primitive root from the first section. |
-| RSA | 5 key pairs | Pick primes, build the public and private keys, encrypt, and decrypt back to the original message. |
-| DES | 5 blocks | A 64 bit block through the key schedule, the initial permutation, one full Feistel round (expansion, key XOR, all eight S-boxes, the P permutation), the round by round trail, and the final permutation. |
-| AES-128 | 5 blocks | A 128 bit block as a 4 by 4 byte grid through key expansion, the initial key add, one full round (SubBytes, ShiftRows, MixColumns, AddRoundKey), all ten rounds, and the ciphertext. |
+- The **tabs** at the top choose the topic.
+- The **row of chips** below the tabs chooses which example you are looking at (five per topic).
+- The buttons at the bottom are **Next step**, **Back**, **Play** (which auto-advances), and **Reset**.
+- The **numbered dots** are a timeline of the whole example. Click any dot to jump straight to that step.
+- **Keyboard shortcuts:** right and left arrow keys move one step, the space bar plays or pauses, and the Home key jumps back to step 1.
 
-That is 25 complete walkthroughs in one file.
+A good rhythm: press **Play** once to watch the whole example flow past, then step through it slowly with the arrow keys to study each line.
 
-## Features
+## How to read the screen
 
-- Step, play, back, and reset controls; keyboard support (left and right arrows to step, space to play, Home to reset).
-- Meaning coded colors: public values, secret values, the shared result, and what the eavesdropper sees. Every value also carries a text tag, so it does not rely on color alone.
-- A live residue grid for primitive roots, and a state pipeline for the block ciphers (Feistel halves for DES, the 4 by 4 byte grid for AES) that updates as you step.
-- Collapsible "compute by hand" panels: square and multiply for modular exponentiation, the eight DES S-box lookups, all sixteen DES round keys, the AES round keys, and the full AES round table.
-- Single self contained HTML file. No build step and no runtime dependencies. Fonts load from Google Fonts when online and fall back to system fonts offline.
-- Responsive layout, respects the reduce motion setting, and has visible keyboard focus rings.
+### The colors mean something
 
-## Run locally
+Every value is colored by its role, and also carries a small text label so you never have to rely on color alone:
 
-Open `index.html` in any modern browser. That is all it needs.
+- **cyan is public:** anyone, including an attacker, is allowed to see it.
+- **amber is secret:** it never leaves its owner.
+- **mint is the payoff:** the shared secret both sides reach, or the message that gets recovered.
+- **red is what the eavesdropper sees:** the values an outsider could capture off the wire.
 
-To serve it over HTTP instead (useful for testing exactly what Pages will serve):
+### The explanation panel
 
-```bash
-python3 -m http.server 8000
-# then open http://localhost:8000
-```
+The panel under the picture explains the current step. It shows the step title, the general formula, then the same formula with the real numbers filled in, a highlighted result, and a short plain-language reason for why this step works. Whenever a value comes from a large calculation, there is a link such as "Show how this is computed by hand" that you can expand to see the full working.
 
-## Publish with GitHub Pages
+### Each topic has its own picture
 
-1. Create a new repository and add these files, then push to the `main` branch.
-2. In the repository, go to **Settings** then **Pages**.
-3. Under **Build and deployment**, set **Source** to **Deploy from a branch**.
-4. Choose branch **main** and folder **/ (root)**, then **Save**.
-5. Wait about a minute. Your site appears at the URL shown at the top of the Pages settings.
+- **Primitive roots** show a grid of all the possible remainders. As you test a candidate, the remainders its powers can reach light up. A value that fails lights only part of the grid; the true primitive root lights the whole grid. The small number in a cell's corner tells you which power of the candidate lands on that remainder.
+- **Diffie-Hellman and RSA** show two people as cards on the left and right, a public channel between them, and Eve, the eavesdropper, underneath. Watch which values travel across the channel and which never leave a person's card.
+- **DES and AES** show the plaintext block and the key at the top, a strip of the cipher's stages with the current stage highlighted, and a live view of the block as it changes (two halves for DES, a grid of bytes for AES). Expandable tables let you see all the round keys and the state after every single round.
 
-The included empty `.nojekyll` file tells Pages to serve the files as is, with no Jekyll processing.
+## A good order to learn in
 
-## Verification and reproducibility
+Go left to right: primitive roots, then Diffie-Hellman, then RSA, then DES, then AES. Primitive roots set up the idea that Diffie-Hellman needs, RSA is the other classic public-key method, and DES then AES move you into the symmetric block ciphers.
 
-Every numeric value in the walkthrough is verified. The DES and AES examples were computed by from scratch reference implementations and then checked byte for byte against a well known crypto library and against the published FIPS-197 test vectors, including the Appendix B intermediate round states (so the round by round values shown in the app are verified, not only the final ciphertext). The classic DES textbook vector reproduces exactly.
+## What to take away from each section
 
-To reproduce the verification yourself:
+- **Primitive roots:** what it means for one number to generate a whole group, and why only some values qualify.
+- **Diffie-Hellman:** how both sides compute the same secret by different routes, and why the listener cannot.
+- **RSA:** why the public and private keys fit together, and that decrypting returns the exact original message.
+- **DES:** the Feistel round, and how repeating a simple round many times spreads one bit across the whole block.
+- **AES:** the four operations in a round (substitute, shift, mix, add key) and how the block is treated as a grid of bytes.
 
-```bash
-pip install -r requirements.txt
-python verify/verify_vectors.py
-```
+## Try these
 
-Expected output: each primitive root, DES, and AES vector printed, ending with `ALL VECTORS VERIFIED`. The same script can regenerate the embedded data blob with `python verify/verify_vectors.py --emit cipherdata.json` if you ever want to rebuild it.
+- In RSA, switch to a different example and, before stepping to the end, predict the ciphertext, then check yourself.
+- In the primitive roots tab, pick a value that is not a primitive root and guess how many remainders it will reach before you step through it.
+- Trace one AES round on paper for the first example, then compare against the expandable round table.
+- Explain in one sentence why the two Diffie-Hellman parties end up with the same number.
 
-## Teaching notes and honest caveats
+## Good to know
 
-Worth stating clearly to students:
+- Nothing to install. It runs in any modern web browser, on a laptop or a phone.
+- The examples use small numbers on purpose so you can check the arithmetic by hand. Real keys use the same math with numbers hundreds of digits long, and that size is the whole defense.
+- These show the core algorithms only. Real systems wrap them in a mode of operation and add padding, which you will meet later in the course. Diffie-Hellman in practice also needs authentication to stop a middleman.
+- DES is included to teach structure. Its key is too short to be safe today and it should not be used to protect real data.
+- It works offline as well. Without an internet connection the fonts may look a little different, but everything still works.
 
-- These are the raw cipher cores. Real systems wrap them in a mode of operation (never a single ECB block) and, for the public key parts, use padding such as OAEP. A man in the middle defence for Diffie-Hellman needs authentication.
-- DES is included for how clearly it teaches Feistel structure. Its 56 bit key is broken by brute force in practice and it should not be used to protect real data.
-- The number theory sections use small primes on purpose, so the arithmetic is checkable by hand. Real keys use the same operations at hundreds of digits, and that size is the whole defence.
+---
 
-## Suggested exercises
-
-- Change an RSA message and predict the ciphertext, then step through to check it.
-- For a prime in the primitive root section, pick a non primitive g and predict how many residues it will reach before stepping through.
-- Trace one AES round on paper for the FIPS-197 example and compare against the app.
-- Explain why the two Diffie-Hellman parties reach the same secret by different routes.
-
-## Tech
-
-One HTML file with inline CSS and vanilla JavaScript. No frameworks, no bundler, no package install required to view it.
-
-## License
-
-MIT. See [LICENSE](LICENSE). Free to reuse and adapt for teaching.
-
-## Acknowledgements
-
-Test vectors come from NIST FIPS-197 (AES) and NIST SP 800-38A, and the DES worked example follows the classic published walkthrough. Cross checking during development used the PyCryptodome library.
+Setup, hosting, and how the numbers are verified are in [SETUP.md](SETUP.md).
