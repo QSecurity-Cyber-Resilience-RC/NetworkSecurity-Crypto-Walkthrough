@@ -1,0 +1,961 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cryptography, worked step by step</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0a1526; --bg2:#0b1830; --panel:#102340; --panel2:#0c1c33;
+  --line:rgba(120,155,200,.16); --line2:rgba(120,155,200,.10);
+  --ink:#eef3fa; --muted:#93a6c4; --faint:#5f7392;
+  --public:#38cfe6; --public-b:rgba(56,207,230,.55); --public-g:rgba(56,207,230,.12);
+  --secret:#f4a52a; --secret-b:rgba(244,165,42,.55); --secret-g:rgba(244,165,42,.12);
+  --shared:#57e39a; --shared-b:rgba(87,227,154,.55); --shared-g:rgba(87,227,154,.12);
+  --eve:#ff6f7a; --eve-b:rgba(255,111,122,.5); --eve-g:rgba(255,111,122,.10);
+  --mono:'IBM Plex Mono',ui-monospace,monospace;
+  --sans:'IBM Plex Sans',system-ui,sans-serif;
+  --disp:'Chakra Petch',system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:
+    radial-gradient(1100px 600px at 82% -8%, rgba(56,207,230,.10), transparent 60%),
+    radial-gradient(900px 620px at 6% 108%, rgba(87,227,154,.07), transparent 55%),
+    var(--bg);
+  color:var(--ink); font-family:var(--sans); line-height:1.5;
+  -webkit-font-smoothing:antialiased; padding:30px 20px 70px;
+}
+body::before{
+  content:""; position:fixed; inset:0; pointer-events:none; z-index:0; opacity:.5;
+  background-image:
+    linear-gradient(rgba(120,155,200,.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(120,155,200,.05) 1px, transparent 1px);
+  background-size:44px 44px;
+  -webkit-mask-image:radial-gradient(circle at 50% 30%, #000, transparent 85%);
+          mask-image:radial-gradient(circle at 50% 30%, #000, transparent 85%);
+}
+.wrap{position:relative; z-index:1; max-width:1060px; margin:0 auto}
+
+/* ---------- header ---------- */
+.eyebrow{
+  font-family:var(--disp); font-weight:600; letter-spacing:.28em; text-transform:uppercase;
+  font-size:11px; color:var(--public); margin:0 0 12px; display:flex; align-items:center; gap:10px;
+}
+.eyebrow::before{content:""; width:26px; height:1px; background:var(--public); opacity:.7}
+h1{
+  font-family:var(--disp); font-weight:700; font-size:clamp(28px,5vw,44px);
+  line-height:1.04; margin:0 0 12px; letter-spacing:-.01em;
+}
+h1 .slash{color:var(--muted); font-weight:500}
+.lede{max-width:60ch; color:var(--muted); font-size:15.5px; margin:0}
+
+/* ---------- tabs ---------- */
+.tabs{display:flex; gap:8px; margin:26px 0 0; flex-wrap:wrap}
+.tab{
+  appearance:none; cursor:pointer; font-family:var(--disp); font-weight:600; letter-spacing:.02em;
+  font-size:15px; color:var(--muted); background:var(--panel2);
+  border:1px solid var(--line); border-radius:11px; padding:12px 18px;
+  transition:color .18s, border-color .18s, background .18s, transform .12s;
+}
+.tab:hover{color:var(--ink); border-color:var(--line)}
+.tab[aria-selected="true"]{color:var(--ink); background:var(--panel);
+  border-color:var(--public-b); box-shadow:0 0 0 1px var(--public-b), 0 10px 30px -18px var(--public)}
+.tab small{display:block; font-family:var(--sans); font-weight:400; letter-spacing:0;
+  font-size:11px; color:var(--faint); margin-top:2px}
+.tab[aria-selected="true"] small{color:var(--muted)}
+
+/* ---------- idea + legend ---------- */
+.idea{margin:20px 0 0; padding:16px 18px; border-left:2px solid var(--public);
+  background:linear-gradient(90deg, rgba(56,207,230,.06), transparent);
+  border-radius:0 10px 10px 0; color:var(--ink); font-size:14.5px; max-width:72ch}
+.legend{display:flex; gap:16px 20px; flex-wrap:wrap; margin:16px 2px 0; font-size:12px; color:var(--muted)}
+.legend span{display:inline-flex; align-items:center; gap:7px}
+.dot{width:11px; height:11px; border-radius:3px; flex:none}
+.dot.pub{background:var(--public)} .dot.sec{background:var(--secret)}
+.dot.shr{background:var(--shared)} .dot.eve{background:var(--eve)}
+
+/* ---------- chips ---------- */
+.chips-label{font-family:var(--disp); font-size:11px; letter-spacing:.2em; text-transform:uppercase;
+  color:var(--faint); margin:26px 0 10px}
+.chips{display:flex; gap:8px; flex-wrap:wrap}
+.chip{appearance:none; cursor:pointer; text-align:left; background:var(--panel2);
+  border:1px solid var(--line); border-radius:10px; padding:9px 14px; min-width:78px;
+  color:var(--muted); transition:.16s; font-family:var(--mono)}
+.chip:hover{color:var(--ink); border-color:var(--line)}
+.chip b{display:block; font-size:15px; color:inherit; font-weight:600}
+.chip small{display:block; font-size:10.5px; color:var(--faint); margin-top:1px; font-family:var(--mono)}
+.chip[aria-selected="true"]{color:var(--ink); background:var(--panel);
+  border-color:var(--shared-b); box-shadow:0 0 0 1px var(--shared-b)}
+.chip[aria-selected="true"] small{color:var(--muted)}
+
+/* ---------- stage ---------- */
+.stage{margin-top:22px; background:linear-gradient(180deg, var(--panel), var(--panel2));
+  border:1px solid var(--line); border-radius:18px; padding:20px; box-shadow:0 40px 80px -60px #000}
+.scene-cap{font-size:12.5px; color:var(--muted); margin:0 0 14px; display:flex; gap:8px; align-items:baseline}
+.scene-cap b{font-family:var(--disp); color:var(--ink); font-weight:600; font-size:13px}
+
+.actors{position:relative; display:flex; align-items:stretch; gap:0}
+.actor{flex:1 1 0; min-width:0; background:var(--panel2); border:1px solid var(--line);
+  border-radius:13px; padding:13px 13px 14px}
+.actor-head{display:flex; align-items:center; gap:9px; margin-bottom:11px}
+.avatar{width:30px; height:30px; border-radius:8px; flex:none; display:grid; place-items:center;
+  font-family:var(--disp); font-weight:700; font-size:13px; color:var(--bg);
+  background:linear-gradient(135deg,#cfe0f2,#8fb0d6)}
+.actor.right .avatar{background:linear-gradient(135deg,#f6d79b,#e6b56a)}
+.actor-name{font-family:var(--disp); font-weight:600; font-size:14px; line-height:1.1}
+.actor-role{font-size:10.5px; color:var(--faint); text-transform:uppercase; letter-spacing:.12em; margin-top:2px}
+.pills{display:flex; flex-wrap:wrap; gap:7px; min-height:34px}
+.empty-hint{font-size:11.5px; color:var(--faint); font-style:italic}
+
+.pill{font-family:var(--mono); font-size:12.5px; font-weight:500; padding:5px 9px; border-radius:8px;
+  border:1px solid var(--line); background:#0a1930; display:inline-flex; align-items:baseline; gap:7px;
+  white-space:nowrap}
+.pill .pv{font-weight:600}
+.pill .pt{font-size:8.5px; letter-spacing:.13em; text-transform:uppercase; opacity:.85}
+.pill.public{border-color:var(--public-b); background:var(--public-g); color:#bff0f8}
+.pill.public .pt{color:var(--public)}
+.pill.secret{border:1px dashed var(--secret-b); background:var(--secret-g); color:#f8dca8}
+.pill.secret .pt{color:var(--secret)}
+.pill.shared{border-color:var(--shared-b); background:var(--shared-g); color:#c2f4da; box-shadow:0 0 0 1px var(--shared-b) inset}
+.pill.shared .pt{color:var(--shared)}
+.pill.eve{border:1px dotted var(--eve-b); background:var(--eve-g); color:#ffd0d4}
+.pill.eve .pt{color:var(--eve)}
+.pill.pop{animation:pop .5s cubic-bezier(.2,1.2,.3,1)}
+@keyframes pop{0%{transform:scale(.6); opacity:0}55%{transform:scale(1.08)}100%{transform:scale(1); opacity:1}}
+
+/* wire */
+.wire{flex:0 0 96px; position:relative; display:flex; align-items:center; justify-content:center}
+.wire .rail{position:absolute; left:6px; right:6px; top:50%; height:2px; transform:translateY(-50%);
+  background-image:linear-gradient(90deg, var(--public-b) 0 8px, transparent 8px 16px);
+  background-size:16px 2px; opacity:.7; animation:flow 1.1s linear infinite}
+.wire .rail::before,.wire .rail::after{content:""; position:absolute; top:50%; width:6px; height:6px;
+  border-radius:50%; background:var(--public); transform:translateY(-50%); opacity:.8}
+.wire .rail::before{left:-2px} .wire .rail::after{right:-2px}
+.wire .tag{position:relative; z-index:2; font-size:9px; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--faint); background:var(--panel2); padding:3px 6px; border-radius:6px; border:1px solid var(--line)}
+@keyframes flow{to{background-position:16px 0}}
+
+.token{position:absolute; z-index:6; padding:5px 10px; border-radius:8px; font-family:var(--mono);
+  font-size:12px; font-weight:600; white-space:nowrap; pointer-events:none; left:0;
+  box-shadow:0 6px 18px rgba(0,0,0,.5)}
+.token.public{background:var(--public); color:#04222a}
+.token.secret{background:var(--secret); color:#3a2600}
+
+/* channel + observer */
+.observer{display:flex; gap:12px; margin-top:12px; flex-wrap:wrap}
+.band{flex:1 1 260px; background:#0a1930; border:1px solid var(--line); border-radius:12px; padding:11px 13px}
+.band .bh{font-family:var(--disp); font-size:11px; letter-spacing:.16em; text-transform:uppercase;
+  color:var(--faint); margin-bottom:9px; display:flex; align-items:center; gap:8px}
+.band .bh .ic{width:16px; height:16px; border-radius:5px; display:grid; place-items:center; font-size:10px}
+.band.params .bh .ic{background:var(--public-g); color:var(--public)}
+.band.attacker{border-color:var(--eve-b); background:linear-gradient(180deg, rgba(255,111,122,.05), #0a1930)}
+.band.attacker .bh{color:var(--eve)} .band.attacker .bh .ic{background:var(--eve-g); color:var(--eve)}
+.band-note{font-size:11.5px; color:var(--muted); margin-top:10px; display:flex; gap:7px; align-items:flex-start}
+.band-note .x{color:var(--eve); font-weight:700; flex:none}
+.strike{font-family:var(--mono); font-size:12.5px; color:var(--eve); margin-top:9px}
+.strike s{opacity:.7}
+
+/* ---------- spotlight ---------- */
+.spot{margin-top:16px; background:#0a1930; border:1px solid var(--line); border-radius:14px;
+  padding:18px 20px; overflow:hidden}
+.spot-enter{animation:enter .38s ease both}
+@keyframes enter{from{opacity:0; transform:translateY(8px)}to{opacity:1; transform:none}}
+.spot-kicker{font-family:var(--disp); font-size:10.5px; letter-spacing:.2em; text-transform:uppercase; color:var(--public)}
+.spot-title{font-family:var(--disp); font-weight:600; font-size:19px; margin:5px 0 14px; line-height:1.15}
+.spot-formula{font-family:var(--mono); font-size:14px; color:var(--muted); padding:8px 12px;
+  border:1px dashed var(--line); border-radius:8px; display:inline-block}
+.spot-formula sup{font-size:.72em}
+.spot-sub{font-family:var(--mono); font-size:clamp(16px,2.6vw,21px); margin:14px 0 0; color:var(--ink); line-height:1.6}
+.spot-sub sup{font-size:.68em} .spot-sub b{color:var(--shared); font-weight:600}
+.spot-verify{font-family:var(--mono); font-size:13px; color:var(--muted); margin-top:8px}
+.spot-result{display:inline-flex; align-items:baseline; gap:12px; margin-top:16px; padding:10px 16px;
+  border-radius:10px; border:1px solid var(--line)}
+.spot-result .rl{font-size:10px; letter-spacing:.16em; text-transform:uppercase; color:var(--faint)}
+.spot-result .rv{font-family:var(--mono); font-size:26px; font-weight:600; line-height:1}
+.spot-result .rt{font-size:9.5px; letter-spacing:.13em; text-transform:uppercase; font-weight:600}
+.spot-result.public{background:var(--public-g); border-color:var(--public-b)}
+.spot-result.public .rv,.spot-result.public .rt{color:var(--public)}
+.spot-result.secret{background:var(--secret-g); border-color:var(--secret-b)}
+.spot-result.secret .rv,.spot-result.secret .rt{color:var(--secret)}
+.spot-result.shared{background:var(--shared-g); border-color:var(--shared-b)}
+.spot-result.shared .rv,.spot-result.shared .rt{color:var(--shared)}
+.spot-why{color:var(--muted); font-size:14px; margin:16px 0 0; max-width:74ch}
+
+.trace{margin-top:14px; border-top:1px solid var(--line2); padding-top:12px}
+.trace summary{cursor:pointer; font-size:12.5px; color:var(--public); font-family:var(--sans);
+  list-style:none; display:inline-flex; align-items:center; gap:7px; user-select:none}
+.trace summary::before{content:"▸"; font-size:10px; transition:transform .2s}
+.trace[open] summary::before{transform:rotate(90deg)}
+.trace-head{font-family:var(--mono); font-size:12.5px; color:var(--muted); margin:10px 0 8px}
+.tl{font-family:var(--mono); font-size:12.5px; color:var(--ink); padding:3px 0 3px 14px;
+  border-left:1px solid var(--line); margin-left:2px; opacity:.92}
+
+/* ---------- transport ---------- */
+.rail-dots{display:flex; gap:7px; margin:20px 0 14px; flex-wrap:wrap}
+.rd{width:auto; height:26px; min-width:26px; padding:0 8px; border-radius:7px; cursor:pointer;
+  background:transparent; border:1px solid var(--line); color:var(--faint); font-family:var(--mono);
+  font-size:11px; transition:.15s; display:grid; place-items:center}
+.rd:hover{color:var(--ink); border-color:var(--muted)}
+.rd.past{background:var(--panel); color:var(--muted); border-color:var(--line)}
+.rd.now{background:var(--public); color:#04222a; border-color:var(--public); font-weight:600}
+
+.transport{display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+.btn{appearance:none; cursor:pointer; font-family:var(--sans); font-weight:600; font-size:14px;
+  border-radius:10px; padding:11px 16px; border:1px solid var(--line); background:var(--panel2);
+  color:var(--ink); transition:.15s; display:inline-flex; align-items:center; gap:8px}
+.btn:hover:not(:disabled){border-color:var(--muted); transform:translateY(-1px)}
+.btn:disabled{opacity:.4; cursor:not-allowed}
+.btn.primary{background:var(--public); color:#04222a; border-color:var(--public)}
+.btn.primary:hover:not(:disabled){box-shadow:0 10px 26px -12px var(--public)}
+.btn.play[data-on="true"]{background:var(--shared); color:#053420; border-color:var(--shared)}
+.counter{margin-left:auto; font-family:var(--mono); font-size:12.5px; color:var(--muted)}
+.counter b{color:var(--ink)}
+
+.foot{margin-top:26px; font-size:12px; color:var(--faint); text-align:center; max-width:70ch; margin-inline:auto}
+.foot b{color:var(--muted); font-weight:600}
+
+@media (max-width:719px){
+  .actors{flex-direction:column}
+  .wire{flex-basis:auto; height:44px; margin:2px 0}
+  .wire .rail{left:50%; right:auto; top:6px; bottom:6px; width:2px; height:auto; transform:translateX(-50%);
+    background-image:linear-gradient(180deg,var(--public-b) 0 8px,transparent 8px 16px); background-size:2px 16px}
+  .wire .rail::before{left:50%; top:-2px; transform:translate(-50%,0)} .wire .rail::after{right:auto; left:50%; top:auto; bottom:-2px; transform:translate(-50%,0)}
+  .counter{margin-left:0; width:100%}
+}
+@media (prefers-reduced-motion:reduce){
+  *{animation-duration:.001ms !important; transition-duration:.001ms !important}
+  .wire .rail{animation:none}
+}
+:focus-visible{outline:2px solid var(--public); outline-offset:2px; border-radius:8px}
+
+/* ---------- primitive-root residue grid ---------- */
+.pcap{font-size:12.5px;color:var(--muted);margin:0 2px 12px;max-width:78ch}
+.pgrid{display:flex;flex-wrap:wrap;gap:7px}
+.pcell{width:46px;height:42px;border-radius:8px;border:1px solid var(--line);background:#0a1930;
+  display:grid;place-items:center;position:relative;font-family:var(--mono);font-size:13px;
+  color:var(--muted);transition:background .25s,border-color .25s,color .25s,opacity .25s}
+.pcell .k{position:absolute;top:3px;right:5px;font-size:8px;color:var(--faint);opacity:.75}
+.pcell.on{background:var(--public-g);border-color:var(--public-b);color:#bff0f8}
+.pcell.on .k{color:var(--public)}
+.pcell.root{background:var(--shared-g);border-color:var(--shared-b);color:#c2f4da;
+  box-shadow:0 0 0 1px var(--shared-b) inset}
+.pcell.dim{opacity:.38}
+.pcstat{font-family:var(--mono);font-size:12.5px;color:var(--muted);margin-top:14px;
+  padding-top:12px;border-top:1px solid var(--line2)}
+
+/* ---------- cipher pipeline scene ---------- */
+.cio{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+.ciobox{flex:1 1 240px;min-width:0;background:#0a1930;border:1px solid var(--line);
+  border-radius:12px;padding:11px 13px}
+.ciobox .lbl{font-family:var(--disp);font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--faint);margin-bottom:7px}
+.ciobox.key{border-color:var(--secret-b);background:var(--secret-g)}
+.ciobox.key .lbl{color:var(--secret)}
+.ciohex{font-family:var(--mono);font-size:13px;word-break:break-all;letter-spacing:.03em;color:var(--ink)}
+.ciobox.key .ciohex{color:#f8dca8}
+.pipe{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:16px}
+.pstage{font-family:var(--mono);font-size:11px;padding:6px 10px;border-radius:8px;
+  border:1px solid var(--line);background:#0a1930;color:var(--faint);white-space:nowrap;transition:.2s}
+.pstage.act{background:var(--public-g);border-color:var(--public-b);color:#bff0f8;
+  box-shadow:0 0 0 1px var(--public-b)}
+.parrow{color:var(--faint);font-size:10px}
+.statewrap{background:#0a1930;border:1px solid var(--line);border-radius:12px;padding:13px 14px}
+.statewrap .lbl{font-family:var(--disp);font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--faint);margin-bottom:11px}
+.sgrid{display:inline-grid;grid-template-columns:repeat(4,44px);gap:5px}
+.sbyte{width:44px;height:38px;border-radius:7px;border:1px solid var(--line);background:#0a1e38;
+  display:grid;place-items:center;font-family:var(--mono);font-size:13px;color:var(--ink)}
+.shalf{display:flex;gap:10px;flex-wrap:wrap}
+.shchip{font-family:var(--mono);font-size:14px;padding:9px 13px;border-radius:9px;
+  border:1px solid var(--line);background:#0a1e38;color:var(--ink);letter-spacing:.04em}
+.shchip .t{font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);
+  display:block;margin-bottom:4px}
+
+/* ---------- tables + detail inside the spotlight ---------- */
+.spot-extra{margin-top:14px}
+.ktab{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:11.5px}
+.ktab td,.ktab th{border:1px solid var(--line2);padding:4px 8px;text-align:left}
+.ktab th{color:var(--faint);font-weight:600}
+.ktab td{color:var(--muted)} .ktab td.v{color:var(--ink)}
+.fbox{font-family:var(--mono);font-size:12.5px;color:var(--ink);line-height:1.95}
+.fbox .st{color:var(--muted)}
+.sbtab{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:10.5px;margin-top:10px}
+.sbtab td,.sbtab th{border:1px solid var(--line2);padding:3px 4px;text-align:center;color:var(--ink)}
+.sbtab th{color:var(--faint);font-weight:600}
+.sbtab td.st{color:var(--muted);text-align:right;white-space:nowrap}
+.scrollx{overflow-x:auto;margin-top:6px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p class="eyebrow">Cryptography, from the inside</p>
+  <h1>How the maths actually runs <span class="slash">/</span> worked step by step</h1>
+  <p class="lede">Five topics, each with five real and fully checked examples, animated one move at a time: finding primitive roots, Diffie-Hellman key exchange, RSA, and the DES and AES block ciphers. Every number is verified, and both ciphers are checked byte for byte against a reference implementation.</p>
+
+  <div class="tabs" role="tablist" aria-label="Choose a topic">
+    <button class="tab" role="tab" id="tab-prim" aria-selected="true" onclick="setAlgo('prim')">
+      Primitive root <small>find the generator g for a prime</small></button>
+    <button class="tab" role="tab" id="tab-dh" aria-selected="false" onclick="setAlgo('dh')">
+      Diffie-Hellman <small>agree a secret in the open</small></button>
+    <button class="tab" role="tab" id="tab-rsa" aria-selected="false" onclick="setAlgo('rsa')">
+      RSA <small>public key locks, private key opens</small></button>
+    <button class="tab" role="tab" id="tab-des" aria-selected="false" onclick="setAlgo('des')">
+      DES <small>16 round Feistel block cipher</small></button>
+    <button class="tab" role="tab" id="tab-aes" aria-selected="false" onclick="setAlgo('aes')">
+      AES <small>modern 128 bit block cipher</small></button>
+  </div>
+
+  <p class="idea" id="idea"></p>
+  <div class="legend" id="legend"></div>
+
+  <p class="chips-label">Pick an example</p>
+  <div class="chips" id="chips" role="tablist" aria-label="Choose an example"></div>
+
+  <div class="stage">
+    <p class="scene-cap" id="sceneCap"></p>
+
+    <div id="sceneExchange">
+      <div class="actors" id="actors">
+        <div class="actor left" id="actor-left"></div>
+        <div class="wire" id="wire"><span class="rail"></span><span class="tag">public channel</span></div>
+        <div class="actor right" id="actor-right"></div>
+      </div>
+      <div class="observer" id="observer"></div>
+    </div>
+
+    <div id="sceneCompute">
+      <div class="pcap" id="pgridCap"></div>
+      <div class="pgrid" id="pgrid"></div>
+      <div class="pcstat" id="pgridStat"></div>
+    </div>
+
+    <div id="sceneCipher">
+      <div class="cio" id="cio"></div>
+      <div class="pipe" id="pipe"></div>
+      <div class="statewrap"><div class="lbl" id="stateLbl">current state</div><div id="stateBody"></div></div>
+    </div>
+
+    <div class="spot" id="spot"></div>
+
+    <div class="rail-dots" id="railDots"></div>
+    <div class="transport">
+      <button class="btn" id="btnBack" onclick="step(-1)">Back</button>
+      <button class="btn primary" id="btnNext" onclick="step(1)">Next step</button>
+      <button class="btn play" id="btnPlay" data-on="false" onclick="togglePlay()">Play</button>
+      <button class="btn" id="btnReset" onclick="reset()">Reset</button>
+      <span class="counter" id="counter"></span>
+    </div>
+  </div>
+
+  <p class="foot">Small numbers are used so you can follow every line by hand. Real systems run the same operations at far larger sizes, and that size is the whole defence. Tip: use the left and right arrow keys to step, and the space bar to play.</p>
+</div>
+
+<script>
+"use strict";
+const CIPHER = {"PRIM":[{"p":11,"pm1":10,"fac":[{"q":2,"k":1},{"q":5,"k":1}],"facStr":"2 x 5","trail":[{"g":2,"tests":[{"q":2,"exp":5,"val":10,"one":false},{"q":5,"exp":2,"val":4,"one":false}],"prim":true}],"g":2,"cycle":[2,4,8,5,10,9,7,3,6,1],"phi":4,"roots":[2,6,7,8]},{"p":17,"pm1":16,"fac":[{"q":2,"k":4}],"facStr":"2^4","trail":[{"g":2,"tests":[{"q":2,"exp":8,"val":1,"one":true}],"prim":false},{"g":3,"tests":[{"q":2,"exp":8,"val":16,"one":false}],"prim":true}],"g":3,"cycle":[3,9,10,13,5,15,11,16,14,8,7,4,12,2,6,1],"phi":8,"roots":[3,5,6,7,10,11,12,14]},{"p":23,"pm1":22,"fac":[{"q":2,"k":1},{"q":11,"k":1}],"facStr":"2 x 11","trail":[{"g":2,"tests":[{"q":2,"exp":11,"val":1,"one":true},{"q":11,"exp":2,"val":4,"one":false}],"prim":false},{"g":3,"tests":[{"q":2,"exp":11,"val":1,"one":true},{"q":11,"exp":2,"val":9,"one":false}],"prim":false},{"g":4,"tests":[{"q":2,"exp":11,"val":1,"one":true},{"q":11,"exp":2,"val":16,"one":false}],"prim":false},{"g":5,"tests":[{"q":2,"exp":11,"val":22,"one":false},{"q":11,"exp":2,"val":2,"one":false}],"prim":true}],"g":5,"cycle":[5,2,10,4,20,8,17,16,11,9,22,18,21,13,19,3,15,6,7,12,14,1],"phi":10,"roots":[5,7,10,11,14,15,17,19,20,21]},{"p":29,"pm1":28,"fac":[{"q":2,"k":2},{"q":7,"k":1}],"facStr":"2^2 x 7","trail":[{"g":2,"tests":[{"q":2,"exp":14,"val":28,"one":false},{"q":7,"exp":4,"val":16,"one":false}],"prim":true}],"g":2,"cycle":[2,4,8,16,3,6,12,24,19,9,18,7,14,28,27,25,21,13,26,23,17,5,10,20,11,22,15,1],"phi":12,"roots":[2,3,8,10,11,14,15,18,19,21,26,27]},{"p":37,"pm1":36,"fac":[{"q":2,"k":2},{"q":3,"k":2}],"facStr":"2^2 x 3^2","trail":[{"g":2,"tests":[{"q":2,"exp":18,"val":36,"one":false},{"q":3,"exp":12,"val":26,"one":false}],"prim":true}],"g":2,"cycle":[2,4,8,16,32,27,17,34,31,25,13,26,15,30,23,9,18,36,35,33,29,21,5,10,20,3,6,12,24,11,22,7,14,28,19,1],"phi":12,"roots":[2,5,13,15,17,18,19,20,22,24,32,35]}],"DES":[{"ct":"85E813540F0AB405","rk":["1B02EFFC7072","79AED9DBC9E5","55FC8A42CF99","72ADD6DB351D","7CEC07EB53A8","63A53E507B2F","EC84B7F618BC","F78A3AC13BFB","E0DBEBEDE781","B1F347BA464F","215FD3DED386","7571F59467E9","97C5D1FABA41","5F43B7F2E73A","BF918D3D3F0A","CB3D8B0E17F5"],"L0":"CC00CCFF","R0":"F0AAF0AA","rounds":[{"i":1,"L":"F0AAF0AA","R":"EF4A6544"},{"i":2,"L":"EF4A6544","R":"CC017709"},{"i":3,"L":"CC017709","R":"A25C0BF4"},{"i":4,"L":"A25C0BF4","R":"77220045"},{"i":5,"L":"77220045","R":"8A4FA637"},{"i":6,"L":"8A4FA637","R":"E967CD69"},{"i":7,"L":"E967CD69","R":"064ABA10"},{"i":8,"L":"064ABA10","R":"D5694B90"},{"i":9,"L":"D5694B90","R":"247CC67A"},{"i":10,"L":"247CC67A","R":"B7D5D7B2"},{"i":11,"L":"B7D5D7B2","R":"C5783C78"},{"i":12,"L":"C5783C78","R":"75BD1858"},{"i":13,"L":"75BD1858","R":"18C3155A"},{"i":14,"L":"18C3155A","R":"C28C960D"},{"i":15,"L":"C28C960D","R":"43423234"},{"i":16,"L":"43423234","R":"0A4CD995"}],"detail":{"ER":"7A15557A1555","K":"1B02EFFC7072","x":"6117BA866527","groups":[{"in":"011000","row":0,"col":12,"out":"0101","val":5},{"in":"010001","row":1,"col":8,"out":"1100","val":12},{"in":"011110","row":0,"col":15,"out":"1000","val":8},{"in":"111010","row":2,"col":13,"out":"0010","val":2},{"in":"100001","row":3,"col":0,"out":"1011","val":11},{"in":"100110","row":2,"col":3,"out":"0101","val":5},{"in":"010100","row":0,"col":10,"out":"1001","val":9},{"in":"100111","row":3,"col":3,"out":"0111","val":7}],"sboxOut":"5C82B597","P":"234AA9BB"},"pre":"0A4CD99543423234","pt":"0123456789ABCDEF","key":"133457799BBCDFF1"},{"ct":"3FA40E8A984D4815","rk":["0B02679B49A5","69A659256A26","45D48AB428D2","7289D2A58257","3CE80317A6C2","23251E3C8545","6C04950AE4C6","5788386CE581","C0C9E926B839","91E307631D72","211F830D893A","7130E5455C54","91C4D04980FC","5443B681DC8D","B691050A16B5","CA3D03B87032"],"L0":"B7A48736","R0":"00FE1327","rounds":[{"i":1,"L":"00FE1327","R":"C9EFE379"},{"i":2,"L":"C9EFE379","R":"C225D717"},{"i":3,"L":"C225D717","R":"1EFC7384"},{"i":4,"L":"1EFC7384","R":"76F2B3DE"},{"i":5,"L":"76F2B3DE","R":"10D55380"},{"i":6,"L":"10D55380","R":"E90739FD"},{"i":7,"L":"E90739FD","R":"572337F0"},{"i":8,"L":"572337F0","R":"CD9968E4"},{"i":9,"L":"CD9968E4","R":"256A96B9"},{"i":10,"L":"256A96B9","R":"8049C24C"},{"i":11,"L":"8049C24C","R":"A1663AA6"},{"i":12,"L":"A1663AA6","R":"B714E099"},{"i":13,"L":"B714E099","R":"A3EB2C46"},{"i":14,"L":"A3EB2C46","R":"B94DA965"},{"i":15,"L":"B94DA965","R":"1A037D0D"},{"i":16,"L":"1A037D0D","R":"6091A7A1"}],"detail":{"ER":"8017FC0A690E","K":"0B02679B49A5","x":"8B159B9120AB","groups":[{"in":"100010","row":2,"col":1,"out":"0001","val":1},{"in":"110001","row":3,"col":8,"out":"1011","val":11},{"in":"010110","row":0,"col":11,"out":"0111","val":7},{"in":"011011","row":1,"col":13,"out":"1010","val":10},{"in":"100100","row":2,"col":2,"out":"0001","val":1},{"in":"010010","row":0,"col":9,"out":"1101","val":13},{"in":"000010","row":0,"col":1,"out":"1011","val":11},{"in":"101011","row":3,"col":5,"out":"1010","val":10}],"sboxOut":"1B7A1DBA","P":"7E4B644F"},"pre":"6091A7A11A037D0D","pt":"4E6F772069732074","key":"0123456789ABCDEF"},{"ct":"8CA64DE9C1B123A7","rk":["000000000000","000000000000","000000000000","000000000000","000000000000","000000000000","000000000000","000000000000","000000000000","000000000000","000000000000","000000000000","000000000000","000000000000","000000000000","000000000000"],"L0":"00000000","R0":"00000000","rounds":[{"i":1,"L":"00000000","R":"D8D8DBBC"},{"i":2,"L":"D8D8DBBC","R":"E73AED4F"},{"i":3,"L":"E73AED4F","R":"5BFA6BA6"},{"i":4,"L":"5BFA6BA6","R":"5E45E257"},{"i":5,"L":"5E45E257","R":"8B197BE0"},{"i":6,"L":"8B197BE0","R":"FDE9894A"},{"i":7,"L":"FDE9894A","R":"19DF0B5C"},{"i":8,"L":"19DF0B5C","R":"907A13F0"},{"i":9,"L":"907A13F0","R":"88190C50"},{"i":10,"L":"88190C50","R":"25D1517C"},{"i":11,"L":"25D1517C","R":"F3EF917E"},{"i":12,"L":"F3EF917E","R":"96E39712"},{"i":13,"L":"96E39712","R":"5A5DA34A"},{"i":14,"L":"5A5DA34A","R":"058CAD0A"},{"i":15,"L":"058CAD0A","R":"BBEA0DC2"},{"i":16,"L":"BBEA0DC2","R":"1C2087FC"}],"detail":{"ER":"000000000000","K":"000000000000","x":"000000000000","groups":[{"in":"000000","row":0,"col":0,"out":"1110","val":14},{"in":"000000","row":0,"col":0,"out":"1111","val":15},{"in":"000000","row":0,"col":0,"out":"1010","val":10},{"in":"000000","row":0,"col":0,"out":"0111","val":7},{"in":"000000","row":0,"col":0,"out":"0010","val":2},{"in":"000000","row":0,"col":0,"out":"1100","val":12},{"in":"000000","row":0,"col":0,"out":"0100","val":4},{"in":"000000","row":0,"col":0,"out":"1101","val":13}],"sboxOut":"EFA72C4D","P":"D8D8DBBC"},"pre":"1C2087FCBBEA0DC2","pt":"0000000000000000","key":"0000000000000000"},{"ct":"59732356F36FDE06","rk":["0B02679B49A5","69A659256A26","45D48AB428D2","7289D2A58257","3CE80317A6C2","23251E3C8545","6C04950AE4C6","5788386CE581","C0C9E926B839","91E307631D72","211F830D893A","7130E5455C54","91C4D04980FC","5443B681DC8D","B691050A16B5","CA3D03B87032"],"L0":"FFFFFFFF","R0":"FFFFFFFF","rounds":[{"i":1,"L":"FFFFFFFF","R":"0FB67827"},{"i":2,"L":"0FB67827","R":"51EEC3E3"},{"i":3,"L":"51EEC3E3","R":"4BAD247B"},{"i":4,"L":"4BAD247B","R":"74F184E0"},{"i":5,"L":"74F184E0","R":"5DDE6037"},{"i":6,"L":"5DDE6037","R":"0B3A7074"},{"i":7,"L":"0B3A7074","R":"EC1521A0"},{"i":8,"L":"EC1521A0","R":"336B5AD0"},{"i":9,"L":"336B5AD0","R":"FA659376"},{"i":10,"L":"FA659376","R":"805D5F8D"},{"i":11,"L":"805D5F8D","R":"E97E80A8"},{"i":12,"L":"E97E80A8","R":"4F393368"},{"i":13,"L":"4F393368","R":"E008D487"},{"i":14,"L":"E008D487","R":"6F63A2E4"},{"i":15,"L":"6F63A2E4","R":"503661FE"},{"i":16,"L":"503661FE","R":"7B5BE837"}],"detail":{"ER":"FFFFFFFFFFFF","K":"0B02679B49A5","x":"F4FD9864B65A","groups":[{"in":"111101","row":3,"col":14,"out":"0110","val":6},{"in":"001111","row":1,"col":7,"out":"1110","val":14},{"in":"110110","row":2,"col":11,"out":"1100","val":12},{"in":"011000","row":0,"col":12,"out":"1011","val":11},{"in":"011001","row":1,"col":12,"out":"0011","val":3},{"in":"001011","row":1,"col":5,"out":"1100","val":12},{"in":"011001","row":1,"col":12,"out":"0010","val":2},{"in":"011010","row":0,"col":13,"out":"0000","val":0}],"sboxOut":"6ECB3C20","P":"F04987D8"},"pre":"7B5BE837503661FE","pt":"FFFFFFFFFFFFFFFF","key":"0123456789ABCDEF"},{"ct":"F07704D0741EB2C2","rk":["194CD072DE8C","4568581ABCCE","06EDA4ACF5B5","DA2D032B6EE3","69A629FEC913","C1948E87475E","708AD2DDB3C0","34F822F0C66D","84BB4473DCCC","02765708B5BF","6D5560AF7CA5","C2C1E96A4BF3","99C31397C91F","251B8BC717D0","3330C5D9A36D","181C5D75C66D"],"L0":"CC00CCFF","R0":"F0AAF0AA","rounds":[{"i":1,"L":"F0AAF0AA","R":"0B7409A5"},{"i":2,"L":"0B7409A5","R":"3B7607FC"},{"i":3,"L":"3B7607FC","R":"1C7A001B"},{"i":4,"L":"1C7A001B","R":"AE95871C"},{"i":5,"L":"AE95871C","R":"E24A5465"},{"i":6,"L":"E24A5465","R":"EB0BF0F3"},{"i":7,"L":"EB0BF0F3","R":"3694FA0A"},{"i":8,"L":"3694FA0A","R":"2C51CAA3"},{"i":9,"L":"2C51CAA3","R":"3F726229"},{"i":10,"L":"3F726229","R":"6255FC3F"},{"i":11,"L":"6255FC3F","R":"93B8D0D1"},{"i":12,"L":"93B8D0D1","R":"AE177DF3"},{"i":13,"L":"AE177DF3","R":"DED31E60"},{"i":14,"L":"DED31E60","R":"149B0B87"},{"i":15,"L":"149B0B87","R":"C95320E2"},{"i":16,"L":"C95320E2","R":"9B7B3602"}],"detail":{"ER":"7A15557A1555","K":"194CD072DE8C","x":"63598508CBD9","groups":[{"in":"011000","row":0,"col":12,"out":"0101","val":5},{"in":"110101","row":3,"col":10,"out":"0111","val":7},{"in":"100110","row":2,"col":3,"out":"1001","val":9},{"in":"000101","row":1,"col":2,"out":"1011","val":11},{"in":"000010","row":0,"col":1,"out":"1100","val":12},{"in":"001100","row":0,"col":6,"out":"0110","val":6},{"in":"101111","row":3,"col":7,"out":"0111","val":7},{"in":"011001","row":1,"col":12,"out":"0000","val":0}],"sboxOut":"579BC670","P":"C774C55A"},"pre":"9B7B3602C95320E2","pt":"0123456789ABCDEF","key":"AABB09182736CCDD"}],"AES":[{"ct":"69C4E0D86A7B0430D8CDB78070B4C55A","rks":["000102030405060708090A0B0C0D0E0F","D6AA74FDD2AF72FADAA678F1D6AB76FE","B692CF0B643DBDF1BE9BC5006830B3FE","B6FF744ED2C2C9BF6C590CBF0469BF41","47F7F7BC95353E03F96C32BCFD058DFD","3CAAA3E8A99F9DEB50F3AF57ADF622AA","5E390F7DF7A69296A7553DC10AA31F6B","14F9701AE35FE28C440ADF4D4EA9C026","47438735A41C65B9E016BAF4AEBF7AD2","549932D1F08557681093ED9CBE2C974E","13111D7FE3944A17F307A78B4D2B30C5"],"init":"00102030405060708090A0B0C0D0E0F0","rounds":[{"i":1,"sub":"63CAB7040953D051CD60E0E7BA70E18C","shift":"6353E08C0960E104CD70B751BACAD0E7","mix":"5F72641557F5BC92F7BE3B291DB9F91A","out":"89D810E8855ACE682D1843D8CB128FE4"},{"i":2,"sub":"A761CA9B97BE8B45D8AD1A611FC97369","shift":"A7BE1A6997AD739BD8C9CA451F618B61","mix":"FF87968431D86A51645151FA773AD009","out":"4915598F55E5D7A0DACA94FA1F0A63F7"},{"i":3,"sub":"3B59CB73FCD90EE05774222DC067FB68","shift":"3BD92268FC74FB735767CBE0C0590E2D","mix":"4C9C1E66F771F0762C3F868E534DF256","out":"FA636A2825B339C940668A3157244D17"},{"i":4,"sub":"2DFB02343F6D12DD09337EC75B36E3F0","shift":"2D6D7EF03F33E334093602DD5BFB12C7","mix":"6385B79FFC538DF997BE478E7547D691","out":"247240236966B3FA6ED2753288425B6C"},{"i":5,"sub":"36400926F9336D2D9FB59D23C42C3950","shift":"36339D50F9B539269F2C092DC4406D23","mix":"F4BCD45432E554D075F1D6C51DD03B3C","out":"C81677BC9B7AC93B25027992B0261996"},{"i":6,"sub":"E847F56514DADDE23F77B64FE7F7D490","shift":"E8DAB6901477D4653FF7F5E2E747DD4F","mix":"9816EE7400F87F556B2C049C8E5AD036","out":"C62FE109F75EEDC3CC79395D84F9CF5D"},{"i":7,"sub":"B415F8016858552E4BB6124C5F998A4C","shift":"B458124C68B68A014B99F82E5F15554C","mix":"C57E1C159A9BD286F05F4BE098C63439","out":"D1876C0F79C4300AB45594ADD66FF41F"},{"i":8,"sub":"3E175076B61C04678DFC2295F6A8BFC0","shift":"3E1C22C0B6FCBF768DA85067F6170495","mix":"BAA03DE7A1F9B56ED5512CBA5F414D23","out":"FDE3BAD205E5D0D73547964EF1FE37F1"},{"i":9,"sub":"5411F4B56BD9700E96A0902FA1BB9AA1","shift":"54D990A16BA09AB596BBF40EA111702F","mix":"E9F74EEC023020F61BF2CCF2353C21C7","out":"BD6E7C3DF2B5779E0B61216E8B10B689"},{"i":10,"sub":"7A9F102789D5F50B2BEFFD9F3DCA4EA7","shift":"7AD5FDA789EF4E272BCA100B3D9FF59F","mix":null,"out":"69C4E0D86A7B0430D8CDB78070B4C55A"}],"detail":{"inState":"00102030405060708090A0B0C0D0E0F0","sub":"63CAB7040953D051CD60E0E7BA70E18C","shift":"6353E08C0960E104CD70B751BACAD0E7","mix":"5F72641557F5BC92F7BE3B291DB9F91A","out":"89D810E8855ACE682D1843D8CB128FE4","rk":"D6AA74FDD2AF72FADAA678F1D6AB76FE","sbEx":{"in":"00","out":"63"},"mixCol":{"in":["63","53","E0","8C"],"out":["5F","72","64","15"]}},"pt":"00112233445566778899AABBCCDDEEFF","key":"000102030405060708090A0B0C0D0E0F"},{"ct":"3925841D02DC09FBDC118597196A0B32","rks":["2B7E151628AED2A6ABF7158809CF4F3C","A0FAFE1788542CB123A339392A6C7605","F2C295F27A96B9435935807A7359F67F","3D80477D4716FE3E1E237E446D7A883B","EF44A541A8525B7FB671253BDB0BAD00","D4D1C6F87C839D87CAF2B8BC11F915BC","6D88A37A110B3EFDDBF98641CA0093FD","4E54F70E5F5FC9F384A64FB24EA6DC4F","EAD27321B58DBAD2312BF5607F8D292F","AC7766F319FADC2128D12941575C006E","D014F9A8C9EE2589E13F0CC8B6630CA6"],"init":"193DE3BEA0F4E22B9AC68D2AE9F84808","rounds":[{"i":1,"sub":"D42711AEE0BF98F1B8B45DE51E415230","shift":"D4BF5D30E0B452AEB84111F11E2798E5","mix":"046681E5E0CB199A48F8D37A2806264C","out":"A49C7FF2689F352B6B5BEA43026A5049"},{"i":2,"sub":"49DED28945DB96F17F39871A7702533B","shift":"49DB873B453953897F02D2F177DE961A","mix":"584DCAF11B4B5AACDBE7CAA81B6BB0E5","out":"AA8F5F0361DDE3EF82D24AD26832469A"},{"i":3,"sub":"AC73CF7BEFC111DF13B5D6B545235AB8","shift":"ACC1D6B8EFB55A7B1323CFDF457311B5","mix":"75EC0993200B633353C0CF7CBB25D0DC","out":"486C4EEE671D9D0D4DE3B138D65F58E7"},{"i":4,"sub":"52502F2885A45ED7E311C807F6CF6A94","shift":"52A4C89485116A28E3CF2FD7F6505E07","mix":"0FD6DAA9603138BF6FC0106B5EB31301","out":"E0927FE8C86363C0D9B1355085B8BE01"},{"i":5,"sub":"E14FD29BE8FBFBBA35C89653976CAE7C","shift":"E1FB967CE8C8AE9B356CD2BA974FFB53","mix":"25D1A9ADBD11D168B63A338E4C4CC0B0","out":"F1006F55C1924CEF7CC88B325DB5D50C"},{"i":6,"sub":"A163A8FC784F29DF10E83D234CD503FE","shift":"A14F3DFE78E803FC10D5A8DF4C632923","mix":"4B868D6D2C4A8980339DF4E837D218D8","out":"260E2E173D41B77DE86472A9FDD28B25"},{"i":7,"sub":"F7AB31F02783A9FF9B4340D354B53D3F","shift":"F783403F27433DF09BB531FF54ABA9D3","mix":"1415B5BF461615EC274656D7342AD843","out":"5A4142B11949DC1FA3E019657A8C040C"},{"i":8,"sub":"BE832CC8D43B86C00AE1D44DDA64F2FE","shift":"BE3BD4FED4E1F2C80A642CC0DA83864D","mix":"00512FD1B1C889FF54766DCDFA1B99EA","out":"EA835CF00445332D655D98AD8596B0C5"},{"i":9,"sub":"87EC4A8CF26EC3D84D4C46959790E7A6","shift":"876E46A6F24CE78C4D904AD897ECC395","mix":"473794ED40D4E4A5A3703AA64C9F42BC","out":"EB40F21E592E38848BA113E71BC342D2"},{"i":10,"sub":"E9098972CB31075F3D327D94AF2E2CB5","shift":"E9317DB5CB322C723D2E895FAF090794","mix":null,"out":"3925841D02DC09FBDC118597196A0B32"}],"detail":{"inState":"193DE3BEA0F4E22B9AC68D2AE9F84808","sub":"D42711AEE0BF98F1B8B45DE51E415230","shift":"D4BF5D30E0B452AEB84111F11E2798E5","mix":"046681E5E0CB199A48F8D37A2806264C","out":"A49C7FF2689F352B6B5BEA43026A5049","rk":"A0FAFE1788542CB123A339392A6C7605","sbEx":{"in":"19","out":"D4"},"mixCol":{"in":["D4","BF","5D","30"],"out":["04","66","81","E5"]}},"pt":"3243F6A8885A308D313198A2E0370734","key":"2B7E151628AED2A6ABF7158809CF4F3C"},{"ct":"3AD77BB40D7A3660A89ECAF32466EF97","rks":["2B7E151628AED2A6ABF7158809CF4F3C","A0FAFE1788542CB123A339392A6C7605","F2C295F27A96B9435935807A7359F67F","3D80477D4716FE3E1E237E446D7A883B","EF44A541A8525B7FB671253BDB0BAD00","D4D1C6F87C839D87CAF2B8BC11F915BC","6D88A37A110B3EFDDBF98641CA0093FD","4E54F70E5F5FC9F384A64FB24EA6DC4F","EAD27321B58DBAD2312BF5607F8D292F","AC7766F319FADC2128D12941575C006E","D014F9A8C9EE2589E13F0CC8B6630CA6"],"init":"40BFABF406EE4D3042CA6B997A5C5816","rounds":[{"i":1,"sub":"090862BF6F28E3042C747FEEDA4A6A47","shift":"09287F476F746ABF2C4A6204DA08E3EE","mix":"529F16C2978615CAE01AAE54BA1A2659","out":"F265E8D51FD2397BC3B9976D9076505C"},{"i":2,"sub":"894D9B03C0B512212E56883C6038534A","shift":"89B5884AC05653032E389B21604D123C","mix":"0F31E929319A3558AEC9589339F04D87","out":"FDF37CDB4B0C8C1BF7FCD8E94AA9BBF8"},{"i":3,"sub":"540D10B9B3FE64AF68B0611ED6D3EA41","shift":"54FE6141B3B0EAB968D310AFD60D641E","mix":"9151ABE1E5541CFD014A713EDA7E3134","out":"ACD1EC9CA242E2C31F690F7AB704B90F"},{"i":4,"sub":"913ECEDE3A2C982EC0F976DAA9F25676","shift":"912C76763AF956DEC0F2CE2EA93E98DA","mix":"4D25CB1EECF716467658C73B49BCC9E9","out":"A2616E5F44A54D39C029E20092B764E9"},{"i":5,"sub":"3AEF9FCF1B06E312BAA598634FA9431E","shift":"3A06981E1BA543CFBAA99F124FEFE363","mix":"F89B35EC4E40724E025B00C734D7D81B","out":"2C4AF31432C3EFC9C8A9B87B252ECDA7"},{"i":6,"sub":"71D60DFA232EDFDDE8D36C213F31BD5C","shift":"712E6C5C23D3BDFAE8310DDD3FD6DF21","mix":"A0C563696FB884E44840BFBEE1D32F0A","out":"CD4DC0137EB3BA1993B939FF2BD3BCF7"},{"i":7,"sub":"BDE3BA7DF36DF4D4DC561216F1666568","shift":"BD6D1268F356657DDC66BAD4F1E3F416","mix":"AC394C731F8DE8C76711B210253DDB33","out":"E26DBB7D40D22134E3B7FDA26B9B077C"},{"i":8,"sub":"983CEAFF09B5FD1811A9543A7F14C510","shift":"98B5541009A9C5FF1114EA187F3CFD3A","mix":"AB05B572C8EB2B92EC04E2FD7D21EC34","out":"41D7C6537D669140DD2F179D02ACC51B"},{"i":9,"sub":"830EB4EDFF338109C115F05E7791A6AF","shift":"8333F0AFFF15A6EDC191B409770E815E","mix":"1741A11891C991688C36386F23AD82AA","out":"BB36C7EB88334D49A4E7112E74F182C4"},{"i":10,"sub":"EA05C6E9C4C3E33B4994823192A1131C","shift":"EAC3821CC49413E949A1C63B9205E331","mix":null,"out":"3AD77BB40D7A3660A89ECAF32466EF97"}],"detail":{"inState":"40BFABF406EE4D3042CA6B997A5C5816","sub":"090862BF6F28E3042C747FEEDA4A6A47","shift":"09287F476F746ABF2C4A6204DA08E3EE","mix":"529F16C2978615CAE01AAE54BA1A2659","out":"F265E8D51FD2397BC3B9976D9076505C","rk":"A0FAFE1788542CB123A339392A6C7605","sbEx":{"in":"40","out":"09"},"mixCol":{"in":["09","28","7F","47"],"out":["52","9F","16","C2"]}},"pt":"6BC1BEE22E409F96E93D7E117393172A","key":"2B7E151628AED2A6ABF7158809CF4F3C"},{"ct":"66E94BD4EF8A2C3B884CFA59CA342B2E","rks":["00000000000000000000000000000000","62636363626363636263636362636363","9B9898C9F9FBFBAA9B9898C9F9FBFBAA","90973450696CCFFAF2F457330B0FAC99","EE06DA7B876A1581759E42B27E91EE2B","7F2E2B88F8443E098DDA7CBBF34B9290","EC614B851425758C99FF09376AB49BA7","217517873550620BACAF6B3CC61BF09B","0EF903333BA9613897060A04511DFA9F","B1D4D8E28A7DB9DA1D7BB3DE4C664941","B4EF5BCB3E92E21123E951CF6F8F188E"],"init":"00000000000000000000000000000000","rounds":[{"i":1,"sub":"63636363636363636363636363636363","shift":"63636363636363636363636363636363","mix":"63636363636363636363636363636363","out":"01000000010000000100000001000000"},{"i":2,"sub":"7C6363637C6363637C6363637C636363","shift":"7C6363637C6363637C6363637C636363","mix":"5D7C7C425D7C7C425D7C7C425D7C7C42","out":"C6E4E48BA48787E8C6E4E48BA48787E8"},{"i":3,"sub":"B469693D4917179BB469693D4917179B","shift":"B417699B4969173DB417699B4969173D","mix":"B8BAC794039F49DFB8BAC794039F49DF","out":"282DF3C46AF386254A4E90A70890E546"},{"i":4,"sub":"34D80D1C020D443FD62F605C3060D95A","shift":"340D605A022FD91CD6600D3F30D8445C","mix":"45D41785B030A0C8253EED720B0B8474","out":"ABD2CDFE375AB54950A0AFC0759A6A5F"},{"i":5,"sub":"62B5BDBB9ABED53B53E079BA9DB802CF","shift":"62BE79CF9AE002BB53B8BD3B9DB5D5BA","mix":"AB4164E4ADFCA83AF3DFC7868A324CB3","out":"D46F4F6C55B896337E05BB3D7979DE23"},{"i":6,"sub":"48A88450FC6C90C3F36BEA27B6B61D26","shift":"486CEA26FC6B1D50F3B684C3B6A89027","mix":"E8938112135D5DC97BD008A123714CB7","out":"04F2CA9707782845E22F019649C5D710"},{"i":7,"sub":"F2897488C5BC346E98157C903BA60ECA","shift":"F2BC7CCAC5150E8898A6746E3B893490","mix":"96DFF34228754F44C03D64BD52FE71CB","out":"B7AAE4C51D252D4F6C920F8194E58150"},{"i":8,"sub":"A9AC69A6A43FD884504F760C22D90C53","shift":"A93F7653A44F0CA650D9698422ACD80C","mix":"2D1E8F0F288802E33DC6CC537F1E310A","out":"23E78C3C132163DBAAC0C6572E03CB95"},{"i":9,"sub":"269464EB7DFDFBB9ACBAB45B317B1F2A","shift":"26FDB42A7DBA1FEBAC7B64B93194FB5B","mix":"CE2AD677DBD8DFEF134FCF99654FA58A","out":"7FFE0E9551A566350E347C472929ECCB"},{"i":10,"sub":"D2BBAB2AD1063396AB1810A0A5A5CE1F","shift":"D206101FD118CE2AABA5AB96A5BB33A0","mix":null,"out":"66E94BD4EF8A2C3B884CFA59CA342B2E"}],"detail":{"inState":"00000000000000000000000000000000","sub":"63636363636363636363636363636363","shift":"63636363636363636363636363636363","mix":"63636363636363636363636363636363","out":"01000000010000000100000001000000","rk":"62636363626363636263636362636363","sbEx":{"in":"00","out":"63"},"mixCol":{"in":["63","63","63","63"],"out":["63","63","63","63"]}},"pt":"00000000000000000000000000000000","key":"00000000000000000000000000000000"},{"ct":"0A940BB5416EF045F1C39458C653EA5A","rks":["000102030405060708090A0B0C0D0E0F","D6AA74FDD2AF72FADAA678F1D6AB76FE","B692CF0B643DBDF1BE9BC5006830B3FE","B6FF744ED2C2C9BF6C590CBF0469BF41","47F7F7BC95353E03F96C32BCFD058DFD","3CAAA3E8A99F9DEB50F3AF57ADF622AA","5E390F7DF7A69296A7553DC10AA31F6B","14F9701AE35FE28C440ADF4D4EA9C026","47438735A41C65B9E016BAF4AEBF7AD2","549932D1F08557681093ED9CBE2C974E","13111D7FE3944A17F307A78B4D2B30C5"],"init":"00000000000000000000000000000000","rounds":[{"i":1,"sub":"63636363636363636363636363636363","shift":"63636363636363636363636363636363","mix":"63636363636363636363636363636363","out":"B5C9179EB1CC1199B9C51B92B5C8159D"},{"i":2,"sub":"D5DDF00BC84B82EE56A6AF4FD5E8595E","shift":"D54BAF5EC8A6590B56E8F0EED5DD824F","mix":"9DF7393C287FC1AA91786C2500A6C6A5","out":"2B65F6374C427C5B2FE3A9256896755B"},{"i":3,"sub":"F14D429A292C10391511D33F45909D39","shift":"F12CD33929119D9A15904239454D103F","mix":"67FE2B85662DACD8FAD14A9F72D069EC","out":"D1015FCBB4EF65679688462076B9D6AD"},{"i":4,"sub":"3E7CCF1F8DDF4D8590C45AB73856F695","shift":"3EDF5A958DC4F61F9056CF85387C4DB7","mix":"C9E0F1F6BF009F808BF3D7230EA01C0C","out":"8E17064A2A35A183729FE59FF3A591F1"},{"i":5,"sub":"19F06FD6E59632EC40DBD9DB0D0681A1","shift":"1996D9A1E5DB81D640066FEC0DF032DB","mix":"EBFFDE3DF00646D90911B76AF87BEF78","out":"D7557DD55999DB3259E2183D558DCDD2"},{"i":6,"sub":"0EFCFF03CBEEB923CB98AD27FC5DBDB5","shift":"0EEEADB5CB98BD03CB5DFF23FCFCB927","mix":"2D906520803F3765B64816A262E80014","out":"73A96A5D7799A5F3111D2B63684B1F7F"},{"i":7,"sub":"8FD3024CF5EE060D82A4F1FB45B3C0D2","shift":"8FEEF1D2F5A4C04C82B3020D45D306FB","mix":"0F92F52A8AB11EF8DEF4223619098CF7","out":"1B6B853069EEFC749AFEFD7B57A04CD1"},{"i":8,"sub":"AF7F9704F928B092B8BB54215BE0293E","shift":"AF28543EF9BB2904B8E097925B7FB021","mix":"573D6DEA12EB1C8A5553C09BA64F3C60","out":"107EEADFB6F77933B5457A6F08F046B2"},{"i":9,"sub":"CAF3879E4E68B6C3D56EDAA8308C5A37","shift":"CA68DA374E6E5A9ED58C87C330F3B6A8","mix":"DA585499EAE22DC17A8712F270A4575E","out":"8EC166481A677AA96A14FF6ECE88C010"},{"i":10,"sub":"19783352A285DAD302FA169F8BC4BACA","shift":"198516CAA2FABA5202C433D38B78DA9F","mix":null,"out":"0A940BB5416EF045F1C39458C653EA5A"}],"detail":{"inState":"00000000000000000000000000000000","sub":"63636363636363636363636363636363","shift":"63636363636363636363636363636363","mix":"63636363636363636363636363636363","out":"B5C9179EB1CC1199B9C51B92B5C8159D","rk":"D6AA74FDD2AF72FADAA678F1D6AB76FE","sbEx":{"in":"00","out":"63"},"mixCol":{"in":["63","63","63","63"],"out":["63","63","63","63"]}},"pt":"000102030405060708090A0B0C0D0E0F","key":"000102030405060708090A0B0C0D0E0F"}]};
+
+
+/* ---- verified RSA + DH data (unchanged, all round-trips checked) ---- */
+const RSA = [
+  {p:3, q:11, e:7, d:3,  m:2,  n:33,  phi:20,
+   encT:"2^7 mod 33, with 7 = 111₂ | start: 2 | bit 1: square → 2²=4≡4, ×2 → 8 | bit 1: square → 8²=64≡31, ×2 → 29 | = 29",
+   decT:"29^3 mod 33, with 3 = 11₂ | start: 29 | bit 1: square → 29²=841≡16, ×29 → 2 | = 2"},
+  {p:5, q:11, e:3, d:27, m:9,  n:55,  phi:40,
+   encT:"9^3 mod 55, with 3 = 11₂ | start: 9 | bit 1: square → 9²=81≡26, ×9 → 14 | = 14",
+   decT:"14^27 mod 55, with 27 = 11011₂ | start: 14 | bit 1: square → 14²=196≡31, ×14 → 49 | bit 0: square → 49²=2401≡36 | bit 1: square → 36²=1296≡31, ×14 → 49 | bit 1: square → 49²=2401≡36, ×14 → 9 | = 9"},
+  {p:7, q:13, e:5, d:29, m:10, n:91,  phi:72,
+   encT:"10^5 mod 91, with 5 = 101₂ | start: 10 | bit 0: square → 10²=100≡9 | bit 1: square → 9²=81≡81, ×10 → 82 | = 82",
+   decT:"82^29 mod 91, with 29 = 11101₂ | start: 82 | bit 1: square → 82²=6724≡81, ×82 → 90 | bit 1: square → 90²=8100≡1, ×82 → 82 | bit 0: square → 82²=6724≡81 | bit 1: square → 81²=6561≡9, ×82 → 10 | = 10"},
+  {p:11, q:13, e:7, d:103, m:9, n:143, phi:120,
+   encT:"9^7 mod 143, with 7 = 111₂ | start: 9 | bit 1: square → 9²=81≡81, ×9 → 14 | bit 1: square → 14²=196≡53, ×9 → 48 | = 48",
+   decT:"48^103 mod 143, with 103 = 1100111₂ | start: 48 | bit 1: square → 48²=2304≡16, ×48 → 53 | bit 0: square → 53²=2809≡92 | bit 0: square → 92²=8464≡27 | bit 1: square → 27²=729≡14, ×48 → 100 | bit 1: square → 100²=10000≡133, ×48 → 92 | bit 1: square → 92²=8464≡27, ×48 → 9 | = 9"},
+  {p:13, q:17, e:5, d:77, m:8, n:221, phi:192,
+   encT:"8^5 mod 221, with 5 = 101₂ | start: 8 | bit 0: square → 8²=64≡64 | bit 1: square → 64²=4096≡118, ×8 → 60 | = 60",
+   decT:"60^77 mod 221, with 77 = 1001101₂ | start: 60 | bit 0: square → 60²=3600≡64 | bit 0: square → 64²=4096≡118 | bit 1: square → 118²=13924≡1, ×60 → 60 | bit 1: square → 60²=3600≡64, ×60 → 83 | bit 0: square → 83²=6889≡38 | bit 1: square → 38²=1444≡118, ×60 → 8 | = 8"},
+];
+// ciphertext for each (verified): c = m^e mod n
+RSA.forEach(x=>{ x.c = modpow(x.m,x.e,x.n); });
+
+const DH = [
+  {p:23, g:5, a:6,  b:15, A:8,  B:19, s:2,
+   At:"5^6 mod 23, with 6 = 110₂ | start: 5 | bit 1: square → 5²=25≡2, ×5 → 10 | bit 0: square → 10²=100≡8 | = 8",
+   Bt:"5^15 mod 23, with 15 = 1111₂ | start: 5 | bit 1: square → 5²=25≡2, ×5 → 10 | bit 1: square → 10²=100≡8, ×5 → 17 | bit 1: square → 17²=289≡13, ×5 → 19 | = 19",
+   sAt:"19^6 mod 23, with 6 = 110₂ | start: 19 | bit 1: square → 19²=361≡16, ×19 → 5 | bit 0: square → 5²=25≡2 | = 2",
+   sBt:"8^15 mod 23, with 15 = 1111₂ | start: 8 | bit 1: square → 8²=64≡18, ×8 → 6 | bit 1: square → 6²=36≡13, ×8 → 12 | bit 1: square → 12²=144≡6, ×8 → 2 | = 2"},
+  {p:23, g:5, a:4,  b:3,  A:4,  B:10, s:18,
+   At:"5^4 mod 23, with 4 = 100₂ | start: 5 | bit 0: square → 5²=25≡2 | bit 0: square → 2²=4≡4 | = 4",
+   Bt:"5^3 mod 23, with 3 = 11₂ | start: 5 | bit 1: square → 5²=25≡2, ×5 → 10 | = 10",
+   sAt:"10^4 mod 23, with 4 = 100₂ | start: 10 | bit 0: square → 10²=100≡8 | bit 0: square → 8²=64≡18 | = 18",
+   sBt:"4^3 mod 23, with 3 = 11₂ | start: 4 | bit 1: square → 4²=16≡16, ×4 → 18 | = 18"},
+  {p:17, g:3, a:5,  b:7,  A:5,  B:11, s:10,
+   At:"3^5 mod 17, with 5 = 101₂ | start: 3 | bit 0: square → 3²=9≡9 | bit 1: square → 9²=81≡13, ×3 → 5 | = 5",
+   Bt:"3^7 mod 17, with 7 = 111₂ | start: 3 | bit 1: square → 3²=9≡9, ×3 → 10 | bit 1: square → 10²=100≡15, ×3 → 11 | = 11",
+   sAt:"11^5 mod 17, with 5 = 101₂ | start: 11 | bit 0: square → 11²=121≡2 | bit 1: square → 2²=4≡4, ×11 → 10 | = 10",
+   sBt:"5^7 mod 17, with 7 = 111₂ | start: 5 | bit 1: square → 5²=25≡8, ×5 → 6 | bit 1: square → 6²=36≡2, ×5 → 10 | = 10"},
+  {p:29, g:2, a:5,  b:12, A:3,  B:7,  s:16,
+   At:"2^5 mod 29, with 5 = 101₂ | start: 2 | bit 0: square → 2²=4≡4 | bit 1: square → 4²=16≡16, ×2 → 3 | = 3",
+   Bt:"2^12 mod 29, with 12 = 1100₂ | start: 2 | bit 1: square → 2²=4≡4, ×2 → 8 | bit 0: square → 8²=64≡6 | bit 0: square → 6²=36≡7 | = 7",
+   sAt:"7^5 mod 29, with 5 = 101₂ | start: 7 | bit 0: square → 7²=49≡20 | bit 1: square → 20²=400≡23, ×7 → 16 | = 16",
+   sBt:"3^12 mod 29, with 12 = 1100₂ | start: 3 | bit 1: square → 3²=9≡9, ×3 → 27 | bit 0: square → 27²=729≡4 | bit 0: square → 4²=16≡16 | = 16"},
+  {p:37, g:2, a:7,  b:4,  A:17, B:16, s:12,
+   At:"2^7 mod 37, with 7 = 111₂ | start: 2 | bit 1: square → 2²=4≡4, ×2 → 8 | bit 1: square → 8²=64≡27, ×2 → 17 | = 17",
+   Bt:"2^4 mod 37, with 4 = 100₂ | start: 2 | bit 0: square → 2²=4≡4 | bit 0: square → 4²=16≡16 | = 16",
+   sAt:"16^7 mod 37, with 7 = 111₂ | start: 16 | bit 1: square → 16²=256≡34, ×16 → 26 | bit 1: square → 26²=676≡10, ×16 → 12 | = 12",
+   sBt:"17^4 mod 37, with 4 = 100₂ | start: 17 | bit 0: square → 17²=289≡30 | bit 0: square → 30²=900≡12 | = 12"},
+];
+
+function modpow(b,e,m){let r=1;b%=m;while(e>0){if(e&1)r=(r*b)%m;e=Math.floor(e/2);b=(b*b)%m;}return r;}
+/* ---------------- topic blurbs + legends ---------------- */
+const IDEA = {
+  prim:"A primitive root of a prime p is a single number g whose powers cycle through every nonzero residue mod p before returning to 1. That one number generates the whole group, and it is exactly the generator g that Diffie-Hellman needs. This section finds the smallest primitive root of each prime and then lists them all.",
+  dh:"Diffie-Hellman lets two people who have never met agree on a shared secret while a stranger reads every message. Each mixes a private number into a public one, and the maths lets both sides reach the same secret that the watcher cannot rebuild.",
+  rsa:"RSA locks a message with a public key everyone can see and unlocks it with a private key only the receiver holds. Its safety rests on one gap: multiplying two large primes is easy, but splitting the product back into those primes is not.",
+  des:"DES is a symmetric block cipher: the same secret key both enciphers and deciphers a 64 bit block. It runs 16 Feistel rounds built from fixed permutations and eight S-boxes. These examples trace real blocks all the way to ciphertext, matched against a reference implementation.",
+  aes:"AES is the modern symmetric block cipher, working on a 128 bit block laid out as a 4 by 4 grid of bytes. Ten rounds of substitute, shift, mix and add-key scramble the block, with every byte treated as an element of the field GF(2^8). These examples follow real blocks round by round, matched against a reference implementation."
+};
+const LEG = {
+  exchange:'<span><i class="dot pub"></i> Public, sent in the open</span>'+
+           '<span><i class="dot sec"></i> Secret, never shared</span>'+
+           '<span><i class="dot shr"></i> The shared payoff</span>'+
+           '<span><i class="dot eve"></i> What the eavesdropper sees</span>',
+  compute:'<span><i class="dot pub"></i> Reached by g\'s powers</span>'+
+          '<span><i class="dot" style="background:#0a1930;border:1px solid var(--line)"></i> Not reached</span>'+
+          '<span><i class="dot shr"></i> A primitive root</span>',
+  cipher:'<span><i class="dot pub"></i> Block or state</span>'+
+         '<span><i class="dot sec"></i> Secret key</span>'+
+         '<span><i class="dot shr"></i> Ciphertext</span>'
+};
+const DES_TAGS=["classic textbook vector","\"Now is t\" as ASCII","all zeros in and key","all-ones input block","different mixed key"];
+const AES_TAGS=["FIPS-197 worked example","FIPS-197 appendix B","NIST SP 800-38A vector","all zeros in and key","byte ramp 00..0F"];
+
+/* ---------------- small helpers ---------------- */
+function det(sum,inner){ return '<details class="trace"><summary>'+sum+'</summary><div style="margin-top:10px">'+inner+'</div></details>'; }
+
+/* ================= builders: RSA + Diffie-Hellman ================= */
+function buildRSA(x){
+  const k=(x.e*x.d-1)/x.phi;
+  return [
+    {title:"Choose two secret primes", formula:"pick primes <i>p</i>, <i>q</i>",
+     sub:`p = ${x.p},&nbsp;&nbsp; q = ${x.q}`, result:null, resultTag:null,
+     why:"These two primes are the trapdoor. Anyone who could factor the public modulus back into p times q would break the key, and for large primes nobody can.",
+     adds:[{side:'L',name:'p',value:x.p,tag:'secret'},{side:'L',name:'q',value:x.q,tag:'secret'}]},
+    {title:"Compute the modulus n", formula:"n = p x q",
+     sub:`n = ${x.p} x ${x.q} = <b>${x.n}</b>`, result:x.n, resultTag:'public',
+     why:"n is published as part of the public key. The number of bits in n is what people mean by the RSA key length.",
+     adds:[{side:'L',name:'n',value:x.n,tag:'public'}]},
+    {title:"Compute Euler's totient of n", formula:"phi(n) = (p - 1)(q - 1)",
+     sub:`phi(n) = ${x.p-1} x ${x.q-1} = <b>${x.phi}</b>`, result:x.phi, resultTag:'secret',
+     why:"phi(n) is easy to get from p and q, but effectively impossible from n alone. It stays secret, because it is what lets you build the private key.",
+     adds:[{side:'L',name:'phi',value:x.phi,tag:'secret'}]},
+    {title:"Choose the public exponent e", formula:"1 &lt; e &lt; phi(n),&nbsp; gcd(e, phi(n)) = 1",
+     sub:`e = ${x.e},&nbsp;&nbsp; gcd(${x.e}, ${x.phi}) = 1`, result:x.e, resultTag:'public',
+     why:"e is chosen coprime to phi(n). That single condition is exactly what guarantees a matching inverse exists, so decryption will be possible and unique.",
+     adds:[{side:'L',name:'e',value:x.e,tag:'public'}]},
+    {title:"Compute the private exponent d", formula:"d = e<sup>-1</sup> mod phi(n)",
+     sub:`${x.e}&middot;d = 1 (mod ${x.phi})&nbsp; gives&nbsp; d = <b>${x.d}</b>`,
+     verify:`check:&nbsp; ${x.e} x ${x.d} = ${x.e*x.d} = ${k} x ${x.phi} + 1`,
+     result:x.d, resultTag:'secret',
+     why:"d is the modular inverse of e, the one number that reverses encryption. It is the heart of the private key.",
+     adds:[{side:'L',name:'d',value:x.d,tag:'secret'}]},
+    {title:"Publish the key pair", formula:"public key (e, n)&nbsp;&nbsp;and&nbsp;&nbsp;private key (d, n)",
+     sub:`public (${x.e}, ${x.n})&nbsp;&nbsp;private (${x.d}, ${x.n})`, result:null, resultTag:null,
+     why:"Bob broadcasts (e, n) to the whole world and keeps d hidden. Anyone can now lock a message that only Bob can open.",
+     adds:[{side:'E',name:'e',value:x.e,tag:'public'},{side:'E',name:'n',value:x.n,tag:'public'}],
+     transmit:{from:'L',label:`(e, n) = (${x.e}, ${x.n})`,tag:'public'}},
+    {title:"Alice encrypts her message", formula:"c = m<sup>e</sup> mod n",
+     sub:`m = ${x.m}&nbsp; gives&nbsp; c = ${x.m}<sup>${x.e}</sup> mod ${x.n} = <b>${x.c}</b>`,
+     result:x.c, resultTag:'public', trace:x.encT,
+     why:"Alice applies Bob's public key to her secret message m. The ciphertext c reveals nothing useful and is safe to send across an open network.",
+     adds:[{side:'R',name:'m',value:x.m,tag:'secret'},{side:'E',name:'c',value:x.c,tag:'public'}],
+     transmit:{from:'R',label:`c = ${x.c}`,tag:'public'}},
+    {title:"Bob decrypts the ciphertext", formula:"m = c<sup>d</sup> mod n",
+     sub:`m = ${x.c}<sup>${x.d}</sup> mod ${x.n} = <b>${x.m}</b>`,
+     result:x.m, resultTag:'shared', trace:x.decT,
+     why:"Raising c to the private exponent d returns the original message exactly, and only someone holding d can do it. That is the entire point of RSA.",
+     adds:[{side:'L',name:'m',value:x.m,tag:'shared',label:'m (recovered)'}]},
+  ];
+}
+
+function buildDH(x){
+  return [
+    {title:"Agree on public parameters", formula:"prime p,&nbsp; generator g",
+     sub:`p = ${x.p},&nbsp;&nbsp; g = ${x.g}`, result:null, resultTag:null,
+     why:"p and g are public. Everyone, including any eavesdropper, may know them. Security never depends on hiding these. The generator g is a primitive root of p, the kind found in the first tab.",
+     adds:[{side:'M',name:'p',value:x.p,tag:'public'},{side:'M',name:'g',value:x.g,tag:'public'},
+           {side:'E',name:'p',value:x.p,tag:'public'},{side:'E',name:'g',value:x.g,tag:'public'}]},
+    {title:"Alice picks her secret", formula:"private a", sub:`a = ${x.a}`, result:null, resultTag:null,
+     why:"Alice draws a random secret a and never transmits it.",
+     adds:[{side:'L',name:'a',value:x.a,tag:'secret'}]},
+    {title:"Bob picks his secret", formula:"private b", sub:`b = ${x.b}`, result:null, resultTag:null,
+     why:"Bob independently draws his own secret b, also never transmitted.",
+     adds:[{side:'R',name:'b',value:x.b,tag:'secret'}]},
+    {title:"Alice sends her public value", formula:"A = g<sup>a</sup> mod p",
+     sub:`A = ${x.g}<sup>${x.a}</sup> mod ${x.p} = <b>${x.A}</b>`, result:x.A, resultTag:'public', trace:x.At,
+     why:"Alice folds her secret into g and sends the result. Recovering a from A is the discrete logarithm problem, which nobody can do quickly at scale.",
+     adds:[{side:'L',name:'A',value:x.A,tag:'public'},{side:'E',name:'A',value:x.A,tag:'public'}],
+     transmit:{from:'L',label:`A = ${x.A}`,tag:'public'}},
+    {title:"Bob sends his public value", formula:"B = g<sup>b</sup> mod p",
+     sub:`B = ${x.g}<sup>${x.b}</sup> mod ${x.p} = <b>${x.B}</b>`, result:x.B, resultTag:'public', trace:x.Bt,
+     why:"Bob does exactly the same and sends B across the open channel.",
+     adds:[{side:'R',name:'B',value:x.B,tag:'public'},{side:'E',name:'B',value:x.B,tag:'public'}],
+     transmit:{from:'R',label:`B = ${x.B}`,tag:'public'}},
+    {title:"Alice computes the shared secret", formula:"s = B<sup>a</sup> mod p",
+     sub:`s = ${x.B}<sup>${x.a}</sup> mod ${x.p} = <b>${x.s}</b>`, result:x.s, resultTag:'shared', trace:x.sAt,
+     why:"Alice raises Bob's public value to her own secret a.",
+     adds:[{side:'L',name:'s',value:x.s,tag:'shared'}]},
+    {title:"Bob computes the shared secret", formula:"s = A<sup>b</sup> mod p",
+     sub:`s = ${x.A}<sup>${x.b}</sup> mod ${x.p} = <b>${x.s}</b>`, result:x.s, resultTag:'shared', trace:x.sBt,
+     why:"Bob raises Alice's public value to his own secret b, and reaches the identical number.",
+     adds:[{side:'R',name:'s',value:x.s,tag:'shared'}]},
+    {title:"Why the two results are equal", formula:"B<sup>a</sup> = g<sup>ba</sup> = g<sup>ab</sup> = A<sup>b</sup>&nbsp; (mod p)",
+     sub:`both equal ${x.g}<sup>${x.a}&middot;${x.b}</sup> mod ${x.p} = <b>${x.s}</b>`, result:x.s, resultTag:'shared',
+     why:"Each side reached g to the power a times b by a different route, so the results match. Eve captured p, g, A and B, but without a or b she cannot get s. That gap is the discrete logarithm problem.",
+     adds:[]},
+  ];
+}
+
+/* ================= builder: primitive roots ================= */
+function primLines(cand,p){
+  return cand.tests.map(t=>{
+    const ok=!t.one;
+    const mark=ok?'<span style="color:var(--shared)">not 1, passes</span>':'<span style="color:var(--eve)">equals 1, fails</span>';
+    return `${cand.g}<sup>${t.exp}</sup> mod ${p} = ${t.val} &nbsp; ${mark}`;
+  }).join('<br>');
+}
+function buildPrim(x){
+  const p=x.p, qs=x.fac.map(f=>f.q).join(', ');
+  const expl=x.fac.map(f=>`(p-1)/${f.q} = ${x.pm1/f.q}`).join(',&nbsp;&nbsp; ');
+  const steps=[
+    {title:"The multiplicative group mod p", formula:"the nonzero residues 1, 2, ..., p-1 under multiplication mod p",
+     sub:`p = ${p},&nbsp; so the group is {1, 2, ..., ${p-1}},&nbsp; that is ${x.pm1} numbers`, result:null, resultTag:null,
+     why:`A primitive root is one residue g whose powers g<sup>1</sup>, g<sup>2</sup>, g<sup>3</sup>, ... run through every one of these ${x.pm1} values before coming back to 1. That single g generates the whole group.`,
+     grid:{mode:'idle'}, gridCap:`The ${x.pm1} nonzero residues mod ${p}. We are hunting for one g whose powers light up all of them.`},
+    {title:"Factor p - 1", formula:"break p - 1 into prime powers",
+     sub:`p - 1 = ${x.pm1} = ${x.facStr}`, result:null, resultTag:null,
+     why:`The quick test in the next step only needs the distinct prime factors of p-1. Here they are ${qs}.`,
+     grid:{mode:'idle'}, gridCap:`Same ${x.pm1} residues. First we factor p-1, because the test depends on its prime factors.`},
+    {title:"The test for a primitive root", formula:"g is primitive when g<sup>(p-1)/q</sup> is not 1 (mod p) for every prime factor q of p-1",
+     sub:`the powers to check are&nbsp; ${expl}`, result:null, resultTag:null,
+     why:"If g raised to each of these one-step-down powers never lands on 1, then the true order of g cannot be any proper divisor of p-1, so it has to be p-1 itself. That is what makes g a primitive root. We now try g = 2, 3, ... until one passes.",
+     grid:{mode:'idle'}, gridCap:"We test candidates in turn. A candidate that fails only reaches part of the group; watch how few cells it lights."}
+  ];
+  x.trail.forEach((cand)=>{
+    steps.push({
+      title:`Try g = ${cand.g}`, formula:"check g<sup>(p-1)/q</sup> mod p for each prime factor q",
+      sub:primLines(cand,p),
+      result: cand.prim? cand.g : null, resultTag: cand.prim? 'shared' : null,
+      why: cand.prim
+        ? `None of the powers hit 1, so g = ${cand.g} has order exactly ${x.pm1}. It is the smallest primitive root of ${p}.`
+        : `One of the powers landed on 1, so g = ${cand.g} has order smaller than ${x.pm1}: its powers only reach a proper subgroup, shown lit on the left. Reject it and try the next value.`,
+      grid:{mode:'cycleOf',g:cand.g},
+      gridCap: cand.prim
+        ? `Every cell lights up: the powers of g = ${cand.g} sweep all ${x.pm1} residues.`
+        : `Lit cells are every residue that g = ${cand.g} can reach. It stops short of the full group, so it is not primitive.`
+    });
+  });
+  const seq=x.cycle.map((v,i)=>`${x.g}<sup>${i+1}</sup>=${v}`).join(',&nbsp; ');
+  steps.push({
+    title:"Verify by listing the full cycle", formula:`g<sup>1</sup>, g<sup>2</sup>, ..., g<sup>${x.pm1}</sup> (mod ${p})`,
+    sub:`with g = ${x.g}:`, result:null, resultTag:null,
+    why:`Every residue from 1 to ${p-1} appears exactly once, and the sequence returns to 1 at the last step. That is the definition of a primitive root, confirmed directly.`,
+    extra:`<div class="fbox">${seq}</div>`,
+    grid:{mode:'cycleOf',g:x.g}, gridCap:`The number in each cell's corner is the power k for which ${x.g}<sup>k</sup> equals that residue. All ${x.pm1} are covered.`
+  });
+  const prod=x.fac.map(f=> f.k>1? `phi(${f.q}^${f.k})` : `phi(${f.q})`).join(' x ');
+  steps.push({
+    title:"How many primitive roots does p have", formula:"count = phi(p - 1)",
+    sub:`phi(${x.pm1}) = <b>${x.phi}</b>`, result:x.phi, resultTag:'shared',
+    why:`Once you have one primitive root g, every power g<sup>k</sup> with gcd(k, p-1) = 1 is also a primitive root. There are exactly phi(p-1) = ${x.phi} of them.`,
+    grid:{mode:'cycleOf',g:x.g}, gridCap:`Still showing the cycle of g = ${x.g}. Next we mark which residues are themselves primitive roots.`
+  });
+  steps.push({
+    title:"All primitive roots of p", formula:"{ g : order of g = p - 1 }",
+    sub:`${x.roots.join(',&nbsp; ')}&nbsp;&nbsp;(${x.phi} values)`, result:null, resultTag:null,
+    why:`Any one of these ${x.phi} values can serve as the generator g in a Diffie-Hellman setup mod ${p}. The smallest, ${x.g}, is the usual choice.`,
+    grid:{mode:'roots'}, gridCap:`The ${x.phi} highlighted cells are the primitive roots of ${p}.`
+  });
+  return steps;
+}
+
+/* ================= cipher table + detail helpers ================= */
+function desKeyTable(x){
+  let r='<table class="ktab"><tr><th>round</th><th>round key K (48 bit, hex)</th></tr>';
+  x.rk.forEach((k,i)=>{ r+=`<tr><td>K${i+1}</td><td class="v">${k}</td></tr>`; });
+  return r+'</table>';
+}
+function desRoundTable(x){
+  let r='<div class="scrollx"><table class="ktab"><tr><th>round i</th><th>L (32 bit)</th><th>R (32 bit)</th></tr>';
+  x.rounds.forEach(rr=>{ r+=`<tr><td>${rr.i}</td><td class="v">${rr.L}</td><td class="v">${rr.R}</td></tr>`; });
+  return r+'</table></div>';
+}
+function desFdetail(x){
+  const d=x.detail;
+  let sb='<div class="scrollx"><table class="sbtab"><tr><td class="st">S-box</td>';
+  for(let i=0;i<8;i++) sb+=`<th>S${i+1}</th>`; sb+='</tr><tr><td class="st">6 bit in</td>';
+  d.groups.forEach(g=>{ sb+=`<td>${g.in}</td>`; }); sb+='</tr><tr><td class="st">row, col</td>';
+  d.groups.forEach(g=>{ sb+=`<td>${g.row},${g.col}</td>`; }); sb+='</tr><tr><td class="st">4 bit out</td>';
+  d.groups.forEach(g=>{ sb+=`<td>${g.out}</td>`; }); sb+='</tr></table></div>';
+  const lines=
+    `<span class="st">expand R0 to 48 bits, E(R0) =</span> ${d.ER}<br>`+
+    `<span class="st">XOR with round key K1 =</span> ${d.x}<br>`+
+    `<span class="st">split into eight 6 bit groups, one per S-box:</span>`+sb+
+    `<span class="st">concatenate the eight 4 bit outputs =</span> ${d.sboxOut}<br>`+
+    `<span class="st">apply the P permutation =</span> ${d.P}<br>`+
+    `<span class="st">new right half R1 = L0 XOR P =</span> ${x.rounds[0].R}`;
+  return `<div class="fbox">${lines}</div>`;
+}
+function aesKeyTable(x){
+  let r='<table class="ktab"><tr><th>round key</th><th>16 bytes (hex)</th></tr>';
+  x.rks.forEach((k,i)=>{ r+=`<tr><td>RK${i}</td><td class="v">${k}</td></tr>`; });
+  return r+'</table>';
+}
+function aesRoundTable(x){
+  let r='<div class="scrollx"><table class="ktab"><tr><th>round</th><th>SubBytes</th><th>ShiftRows</th><th>MixColumns</th><th>AddRoundKey</th></tr>';
+  x.rounds.forEach(rr=>{ r+=`<tr><td>${rr.i}</td><td class="v">${rr.sub}</td><td class="v">${rr.shift}</td><td class="v">${rr.mix?rr.mix:'(skipped)'}</td><td class="v">${rr.out}</td></tr>`; });
+  return r+'</table></div>';
+}
+function aesFdetail(x){
+  const d=x.detail;
+  const lines=
+    `<span class="st">SubBytes: send every byte through the S-box, giving</span> ${d.sub}<br>`+
+    `<span class="st">&nbsp;&nbsp;example: byte ${d.sbEx.in} maps to ${d.sbEx.out}</span><br>`+
+    `<span class="st">ShiftRows: rotate row r left by r bytes, giving</span> ${d.shift}<br>`+
+    `<span class="st">MixColumns: mix each column in GF(2^8), giving</span> ${d.mix}<br>`+
+    `<span class="st">&nbsp;&nbsp;column 0: [${d.mixCol.in.join(', ')}] becomes [${d.mixCol.out.join(', ')}]</span><br>`+
+    `<span class="st">AddRoundKey: XOR round key RK1 = ${d.rk}, giving</span> ${d.out}<br>`+
+    `<span class="st">state after round 1 =</span> ${x.rounds[0].out}`;
+  return `<div class="fbox">${lines}</div>`;
+}
+
+/* ================= builder: DES ================= */
+function buildDES(x){
+  return [
+    {title:"The inputs", formula:"a 64 bit plaintext block and a 64 bit key", result:null, resultTag:null,
+     pipe:'in', stateLbl:'input block (hex)', state:{kind:'block',hex:x.pt,label:'plaintext'},
+     why:"DES enciphers one 64 bit block at a time under a 64 bit key, of which 56 bits are actually used. Every step below transforms these bits. The same key run backwards deciphers."},
+    {title:"Key schedule: sixteen round keys", formula:"PC-1, then per round rotate the halves and apply PC-2",
+     result:null, resultTag:null, pipe:'ks', stateLbl:'input block (unchanged)', state:{kind:'block',hex:x.pt,label:'plaintext'},
+     why:"The key is permuted by PC-1 down to 56 bits, split into two 28 bit halves that rotate left each round, then compressed by PC-2 to a 48 bit round key. This produces sixteen subkeys K1 to K16.",
+     extra:det('Show all sixteen round keys', desKeyTable(x))},
+    {title:"Initial permutation, then split", formula:"IP(block), then take the left and right halves L0 and R0",
+     sub:`L0 = <b>${x.L0}</b>&nbsp;&nbsp;&nbsp; R0 = <b>${x.R0}</b>`, result:null, resultTag:null,
+     pipe:'ip', stateLbl:'after IP', state:{kind:'halves',L:x.L0,R:x.R0},
+     why:"The 64 input bits are shuffled by the fixed IP table and split into two 32 bit halves, the left L0 and the right R0."},
+    {title:"The Feistel round", formula:"L(i) = R(i-1),&nbsp;&nbsp; R(i) = L(i-1) XOR F(R(i-1), K(i))",
+     result:null, resultTag:null, pipe:'rounds', stateLbl:'entering round 1', state:{kind:'halves',L:x.L0,R:x.R0},
+     why:"Each of the 16 rounds keeps the old right half as the new left half, and XORs the old left half with F applied to the old right half and this round's key. F is where the S-boxes live, and it is the only nonlinear part of DES."},
+    {title:"Inside F: round 1 in full", formula:"F(R, K) = P( S-boxes( E(R) XOR K ) )",
+     result:null, resultTag:null, pipe:'rounds', stateLbl:'after round 1', state:{kind:'halves',L:x.rounds[0].L,R:x.rounds[0].R},
+     why:"F expands the 32 bit half to 48 bits, XORs the round key, feeds each 6 bit chunk through one of eight S-boxes down to 4 bits, then permutes the 32 bit result. Here is round 1 end to end.",
+     extra:desFdetail(x)},
+    {title:"Sixteen rounds of diffusion", formula:"repeat the round for i = 1 to 16, each with its own key",
+     result:null, resultTag:null, pipe:'rounds', stateLbl:'after round 16', state:{kind:'halves',L:x.rounds[15].L,R:x.rounds[15].R},
+     why:"Applying the round sixteen times, each with a different key, pushes every input bit through the S-boxes many times so the effect of each bit spreads across the whole block. The full trail of L and R is below.",
+     extra:det('Show every round\'s L and R', desRoundTable(x))},
+    {title:"Swap, then the final permutation", formula:"preoutput = R16 followed by L16, then ciphertext = IP inverse(preoutput)",
+     sub:`preoutput = ${x.pre}`, result:null, resultTag:null,
+     pipe:'fp', stateLbl:'after final permutation', state:{kind:'block',hex:x.ct,label:'ciphertext'},
+     why:"After the last round the two halves are swapped, then the inverse of the initial permutation undoes that shuffle pattern, producing the final ciphertext."},
+    {title:"Ciphertext", formula:"the 64 bit output block",
+     sub:`<b>${x.ct}</b>`, result:x.ct, resultTag:'shared',
+     pipe:'ct', stateLbl:'ciphertext', state:{kind:'block',hex:x.ct,label:'ciphertext'},
+     why:"This block matches a reference DES implementation exactly. Decryption runs the identical structure with the sixteen round keys applied in reverse order, which is the convenience of a Feistel design."},
+  ];
+}
+
+/* ================= builder: AES-128 ================= */
+function buildAES(x){
+  return [
+    {title:"The inputs", formula:"a 128 bit plaintext block and a 128 bit key, each as a 4 by 4 grid of bytes",
+     result:null, resultTag:null, pipe:'in', stateLbl:'input block, filled column by column', state:{kind:'grid',hex:x.pt},
+     why:"AES works on 16 bytes laid out in a 4 by 4 grid, filled one column at a time. Each byte is an element of the field GF(2^8), and every step below is an operation in that field."},
+    {title:"Key expansion: eleven round keys", formula:"stretch the 16 byte key into 11 round keys, 176 bytes in all",
+     result:null, resultTag:null, pipe:'ke', stateLbl:'cipher key', state:{kind:'grid',hex:x.key},
+     why:"Rotating a word, passing it through the S-box, and adding round constants stretches the cipher key into eleven 16 byte round keys: one for the first key-add and one for each of the ten rounds.",
+     extra:det('Show all eleven round keys', aesKeyTable(x))},
+    {title:"Initial AddRoundKey", formula:"state = plaintext XOR round key RK0",
+     sub:`state = <b>${x.init}</b>`, result:null, resultTag:null, pipe:'ark', stateLbl:'after initial AddRoundKey', state:{kind:'grid',hex:x.init},
+     why:"Before the rounds begin, the plaintext is XORed byte for byte with the first round key. This whitening step makes sure the very first operation already depends on the key."},
+    {title:"One AES round", formula:"SubBytes, then ShiftRows, then MixColumns, then AddRoundKey",
+     result:null, resultTag:null, pipe:'rounds', stateLbl:'entering round 1', state:{kind:'grid',hex:x.init},
+     why:"Rounds 1 to 9 apply four transformations in order. SubBytes substitutes each byte through the S-box, ShiftRows rotates the rows, MixColumns mixes each column in GF(2^8), and AddRoundKey XORs that round's key."},
+    {title:"Round 1 in full", formula:"the four transformations applied to the state",
+     result:null, resultTag:null, pipe:'rounds', stateLbl:'after round 1', state:{kind:'grid',hex:x.rounds[0].out},
+     why:"Here is a single round end to end, from the state after the initial key-add through to the state entering round 2.",
+     extra:aesFdetail(x)},
+    {title:"Ten rounds", formula:"rounds 1 to 9 as above; round 10 leaves out MixColumns",
+     result:null, resultTag:null, pipe:'rounds', stateLbl:'after round 10', state:{kind:'grid',hex:x.ct},
+     why:"The final round drops MixColumns so that decryption lines up cleanly with encryption. The state after each of the ten rounds is below.",
+     extra:det('Show every round (SubBytes, ShiftRows, MixColumns, AddRoundKey)', aesRoundTable(x))},
+    {title:"Ciphertext", formula:"the 128 bit output block",
+     sub:`<b>${x.ct}</b>`, result:x.ct, resultTag:'shared', pipe:'ct', stateLbl:'ciphertext', state:{kind:'grid',hex:x.ct},
+     why:"This block matches a reference AES implementation exactly. AES-128 uses ten rounds; the 192 and 256 bit key sizes use twelve and fourteen rounds of the same operations."},
+  ];
+}
+
+/* ---------------- scene metadata ---------------- */
+const META = {
+  prim:{kind:'compute', cap:["Finding the generator g for a prime p.","Its powers must sweep every nonzero residue mod p."]},
+  dh:{kind:'exchange', cap:["Alice and Bob build a shared secret over an open line.","Only a and b stay hidden; p, g, A and B are all public."],
+      left:{name:"Alice",role:"party A",cls:"left"}, right:{name:"Bob",role:"party B",cls:"right"},
+      hasParams:true,
+      attackNote:"Sees p, g, A and B, but cannot recover a, b or the shared secret s without solving a discrete logarithm.",
+      unknown:"s"},
+  rsa:{kind:'exchange', cap:["Bob generates a key pair, then Alice sends him a secret.","p, q and phi stay on Bob's side; the public key and ciphertext travel the wire."],
+       left:{name:"Bob",role:"key owner",cls:"left"}, right:{name:"Alice",role:"sender",cls:"right"},
+       hasParams:false,
+       attackNote:"Sees the public key (e, n) and the ciphertext c, but cannot recover m or d without factoring n back into p times q.",
+       unknown:"m, d, p, q"},
+  des:{kind:'cipher', cap:["One 64 bit block through 16 Feistel rounds.","The same key enciphers and deciphers; here we encipher."],
+       pipe:[['in','input'],['ks','key schedule'],['ip','IP + split'],['rounds','16 rounds'],['fp','swap + FP'],['ct','ciphertext']]},
+  aes:{kind:'cipher', cap:["One 128 bit block held as a 4 by 4 byte grid.","Ten rounds of substitute, shift, mix and add-key."],
+       pipe:[['in','input'],['ke','key expand'],['ark','add key'],['rounds','10 rounds'],['ct','ciphertext']]}
+};
+const TAG_LABEL={public:"public",secret:"secret",shared:"shared",eve:"seen"};
+
+/* ---------------- state ---------------- */
+const PRIM = CIPHER.PRIM;
+let algo='prim', exIdx=0, cur=0, steps=[], playing=false, timer=null;
+const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+function examplesFor(a){ return a==='rsa'?RSA : a==='dh'?DH : a==='prim'?PRIM : a==='des'?CIPHER.DES : CIPHER.AES; }
+function build(){
+  if(algo==='rsa') steps=buildRSA(RSA[exIdx]);
+  else if(algo==='dh') steps=buildDH(DH[exIdx]);
+  else if(algo==='prim') steps=buildPrim(PRIM[exIdx]);
+  else if(algo==='des') steps=buildDES(CIPHER.DES[exIdx]);
+  else steps=buildAES(CIPHER.AES[exIdx]);
+}
+
+/* ---------------- exchange scene (RSA + DH) ---------------- */
+function accum(s){
+  const box={L:[],R:[],M:[],E:[]};
+  for(let i=0;i<=s;i++){ (steps[i].adds||[]).forEach(v=>{ box[v.side].push(Object.assign({},v,{at:i})); }); }
+  return box;
+}
+function pill(v){
+  const cls = v.side==='E' ? 'eve' : v.tag;
+  const nm = v.label || v.name;
+  const popped = v.at===cur ? ' pop' : '';
+  return '<span class="pill '+cls+popped+'"><span>'+nm+' =</span><span class="pv">'+v.value+'</span><span class="pt">'+(TAG_LABEL[cls]||v.tag)+'</span></span>';
+}
+function renderActors(box){
+  const m=META[algo];
+  const side=(node,who,vals)=>{
+    node.className='actor '+who.cls;
+    node.innerHTML='<div class="actor-head"><div class="avatar">'+who.name[0]+'</div>'+
+      '<div><div class="actor-name">'+who.name+'</div><div class="actor-role">'+who.role+'</div></div></div>'+
+      '<div class="pills">'+(vals.length?vals.map(pill).join(''):'<span class="empty-hint">nothing yet</span>')+'</div>';
+  };
+  side(document.getElementById('actor-left'), m.left, box.L);
+  side(document.getElementById('actor-right'), m.right, box.R);
+}
+function renderObserver(box){
+  const m=META[algo]; let html='';
+  if(m.hasParams){
+    html+='<div class="band params"><div class="bh"><span class="ic">&#9671;</span> Public parameters, on the wire</div>'+
+          '<div class="pills">'+(box.M.length?box.M.map(pill).join(''):'<span class="empty-hint">not set yet</span>')+'</div></div>';
+  }
+  const eveVals = box.E.map(v=>pill(Object.assign({},v,{side:'E'}))).join('');
+  html+='<div class="band attacker"><div class="bh"><span class="ic">&#128065;</span> Eve, the eavesdropper</div>'+
+        '<div class="pills">'+(box.E.length?eveVals:'<span class="empty-hint">nothing captured yet</span>')+'</div>'+
+        '<div class="strike">'+m.unknown+' = <s>?</s></div>'+
+        '<div class="band-note"><span class="x">x</span><span>'+m.attackNote+'</span></div></div>';
+  document.getElementById('observer').innerHTML=html;
+}
+
+/* ---------------- compute scene (primitive roots) ---------------- */
+function cycleOf(g,p){ let a=[],x=1; do{ x=(x*g)%p; a.push(x); }while(x!==1 && a.length<p); return a; }
+function renderPrimGrid(){
+  const x=PRIM[exIdx], p=x.p, s=steps[cur], gr=s.grid||{mode:'idle'};
+  document.getElementById('pgridCap').innerHTML=s.gridCap||'';
+  let posMap={};
+  if(gr.mode==='cycleOf'){ cycleOf(gr.g,p).forEach((v,i)=>{ if(!(v in posMap)) posMap[v]=i+1; }); }
+  let cells='';
+  for(let v=1;v<=p-1;v++){
+    let cls='pcell', k='';
+    if(gr.mode==='cycleOf'){ if(v in posMap){ cls+=' on'; k='<span class="k">'+posMap[v]+'</span>'; } else cls+=' dim'; }
+    else if(gr.mode==='roots'){ if(x.roots.indexOf(v)>=0) cls+=' root'; else cls+=' dim'; }
+    cells+='<div class="'+cls+'">'+v+k+'</div>';
+  }
+  document.getElementById('pgrid').innerHTML=cells;
+  let stat='';
+  if(gr.mode==='cycleOf'){ const n=cycleOf(gr.g,p).length;
+    stat='g = '+gr.g+' reaches '+n+' of '+(p-1)+' residues'+(n===p-1?', every one of them, so it is a primitive root':', only part of the group, so it is not a primitive root'); }
+  else if(gr.mode==='roots'){ stat=x.phi+' primitive roots highlighted, matching phi('+x.pm1+') = '+x.phi; }
+  document.getElementById('pgridStat').textContent=stat;
+}
+
+/* ---------------- cipher scene (DES + AES) ---------------- */
+function grid16(hex){
+  let g='<div class="sgrid">';
+  for(let r=0;r<4;r++){ for(let c=0;c<4;c++){ g+='<div class="sbyte">'+hex.substr(2*(c*4+r),2)+'</div>'; } }
+  return g+'</div>';
+}
+function halves(L,R){
+  return '<div class="shalf"><div class="shchip"><span class="t">L</span>'+L+'</div>'+
+         '<div class="shchip"><span class="t">R</span>'+R+'</div></div>';
+}
+function blockChip(hex,label){
+  return '<div class="shalf"><div class="shchip"><span class="t">'+(label||'block')+'</span>'+hex+'</div></div>';
+}
+function renderCipher(){
+  const x=examplesFor(algo)[exIdx], s=steps[cur], m=META[algo];
+  document.getElementById('cio').innerHTML=
+    '<div class="ciobox"><div class="lbl">plaintext block</div><div class="ciohex">'+x.pt+'</div></div>'+
+    '<div class="ciobox key"><div class="lbl">secret key</div><div class="ciohex">'+x.key+'</div></div>';
+  document.getElementById('pipe').innerHTML=m.pipe.map((st,i)=>{
+    const act=st[0]===s.pipe?' act':'';
+    const arrow=i<m.pipe.length-1?'<span class="parrow">&#9656;</span>':'';
+    return '<span class="pstage'+act+'">'+st[1]+'</span>'+arrow;
+  }).join('');
+  const st=s.state||{kind:'block',hex:x.pt};
+  document.getElementById('stateLbl').textContent=s.stateLbl||'current state';
+  let body;
+  if(st.kind==='grid') body=grid16(st.hex);
+  else if(st.kind==='halves') body=halves(st.L,st.R);
+  else body=blockChip(st.hex,st.label);
+  document.getElementById('stateBody').innerHTML=body;
+}
+
+/* ---------------- spotlight + transport ---------------- */
+function traceHTML(tr){
+  const parts=tr.split(' | ');
+  const head=parts[0];
+  const body=parts.slice(1).map(l=>'<div class="tl">'+l+'</div>').join('');
+  return '<details class="trace"><summary>Show how this power is computed by hand, square and multiply</summary>'+
+         '<div class="trace-head">'+head+'</div>'+body+'</details>';
+}
+function renderSpot(){
+  const s=steps[cur];
+  let html='<div class="spot-enter"><div class="spot-kicker">Step '+(cur+1)+' of '+steps.length+'</div>'+
+    '<h3 class="spot-title">'+s.title+'</h3>';
+  if(s.formula) html+='<div class="spot-formula">'+s.formula+'</div>';
+  if(s.sub) html+='<div class="spot-sub">'+s.sub+'</div>';
+  if(s.verify) html+='<div class="spot-verify">'+s.verify+'</div>';
+  if(s.result!==null && s.result!==undefined)
+    html+='<div class="spot-result '+s.resultTag+'"><span class="rl">result</span><span class="rv">'+s.result+'</span><span class="rt">'+TAG_LABEL[s.resultTag]+'</span></div>';
+  if(s.why) html+='<p class="spot-why">'+s.why+'</p>';
+  if(s.trace) html+=traceHTML(s.trace);
+  if(s.extra) html+='<div class="spot-extra">'+s.extra+'</div>';
+  html+='</div>';
+  document.getElementById('spot').innerHTML=html;
+}
+function renderDots(){
+  let h='';
+  for(let i=0;i<steps.length;i++){
+    const c = i<cur?'past':(i===cur?'now':'');
+    h+='<button class="rd '+c+'" title="'+steps[i].title.replace(/"/g,'')+'" onclick="jump('+i+')">'+(i+1)+'</button>';
+  }
+  document.getElementById('railDots').innerHTML=h;
+}
+function renderControls(){
+  document.getElementById('btnBack').disabled = cur===0;
+  const nx=document.getElementById('btnNext');
+  nx.disabled = cur===steps.length-1;
+  nx.textContent = cur===steps.length-1?'End':'Next step';
+  const p=document.getElementById('btnPlay');
+  p.dataset.on = playing?'true':'false';
+  p.textContent = playing?'Pause':'Play';
+  document.getElementById('counter').innerHTML='Step <b>'+(cur+1)+'</b> / '+steps.length;
+}
+function show(id,on){ document.getElementById(id).style.display = on?'':'none'; }
+function renderScene(){
+  const m=META[algo];
+  document.getElementById('sceneCap').innerHTML='<b>'+m.cap[0]+'</b> '+m.cap[1];
+  const kind=m.kind;
+  show('sceneExchange', kind==='exchange');
+  show('sceneCompute', kind==='compute');
+  show('sceneCipher', kind==='cipher');
+  if(kind==='exchange'){ const box=accum(cur); renderActors(box); renderObserver(box); }
+  else if(kind==='compute'){ renderPrimGrid(); }
+  else { renderCipher(); }
+}
+function render(){ renderScene(); renderSpot(); renderDots(); renderControls(); }
+
+/* token travel along the wire, forward transitions only, wide screens only */
+function fly(t){
+  if(reduced || window.innerWidth<720) return;
+  const cont=document.getElementById('actors');
+  const L=document.getElementById('actor-left').getBoundingClientRect();
+  const R=document.getElementById('actor-right').getBoundingClientRect();
+  const W=document.getElementById('wire').getBoundingClientRect();
+  const cr=cont.getBoundingClientRect();
+  const tok=document.createElement('div');
+  tok.className='token '+t.tag; tok.innerHTML=t.label; cont.appendChild(tok);
+  const y=W.top+W.height/2-cr.top;
+  let x0,x1;
+  if(t.from==='L'){ x0=L.right-cr.left; x1=R.left-cr.left-tok.offsetWidth; }
+  else { x0=R.left-cr.left-tok.offsetWidth; x1=L.right-cr.left; }
+  tok.style.top=y+'px';
+  tok.style.transform='translate('+x0+'px,-50%)'; tok.style.opacity='0';
+  tok.getBoundingClientRect();
+  tok.style.transition='transform .8s cubic-bezier(.45,.05,.2,1), opacity .25s';
+  requestAnimationFrame(()=>{ tok.style.opacity='1'; tok.style.transform='translate('+x1+'px,-50%)'; });
+  setTimeout(()=>{ tok.style.opacity='0'; },840);
+  setTimeout(()=>{ tok.remove(); },1120);
+}
+
+/* ---------------- navigation ---------------- */
+function go(n, animate){
+  const prev=cur;
+  cur=Math.max(0,Math.min(steps.length-1,n));
+  render();
+  if(animate && cur>prev && steps[cur].transmit) fly(steps[cur].transmit);
+  if(cur===steps.length-1) stop();
+}
+function step(d){ stop(); go(cur+d, d>0); }
+function jump(i){ stop(); go(i, false); }
+function reset(){ stop(); go(0,false); }
+function play(){
+  playing=true; renderControls();
+  timer=setInterval(()=>{ if(cur>=steps.length-1){ stop(); return; } go(cur+1, true); }, 2600);
+}
+function stop(){ if(timer){clearInterval(timer);timer=null;} if(playing){playing=false; renderControls();} }
+function togglePlay(){ if(playing){ stop(); return; } if(cur===steps.length-1) cur=0; play(); go(cur, false); }
+
+/* ---------------- setup / switching ---------------- */
+function renderChips(){
+  const list=examplesFor(algo);
+  const html=list.map((x,i)=>{
+    let big,sub;
+    if(algo==='rsa'){ big=x.p+' x '+x.q; sub='n = '+x.n; }
+    else if(algo==='dh'){ big='mod '+x.p; sub='g = '+x.g; }
+    else if(algo==='prim'){ big='p = '+x.p; sub='smallest g = '+x.g; }
+    else if(algo==='des'){ big='#'+(i+1); sub=DES_TAGS[i]; }
+    else { big='#'+(i+1); sub=AES_TAGS[i]; }
+    return '<button class="chip" role="tab" aria-selected="'+(i===exIdx)+'" onclick="setEx('+i+')"><b>'+big+'</b><small>'+sub+'</small></button>';
+  }).join('');
+  document.getElementById('chips').innerHTML=html;
+}
+function setAlgo(a){
+  if(a===algo) return;
+  stop(); algo=a; exIdx=0; cur=0;
+  ['prim','dh','rsa','des','aes'].forEach(k=>document.getElementById('tab-'+k).setAttribute('aria-selected', String(k===a)));
+  document.getElementById('idea').innerHTML=IDEA[a];
+  document.getElementById('legend').innerHTML=LEG[META[a].kind];
+  renderChips(); build(); render();
+}
+function setEx(i){ stop(); exIdx=i; cur=0; renderChips(); build(); render(); }
+
+/* keyboard */
+document.addEventListener('keydown',e=>{
+  if(e.target.tagName==='SUMMARY') return;
+  if(e.key==='ArrowRight'){ e.preventDefault(); step(1); }
+  else if(e.key==='ArrowLeft'){ e.preventDefault(); step(-1); }
+  else if(e.key===' '){ e.preventDefault(); togglePlay(); }
+  else if(e.key==='Home'){ e.preventDefault(); reset(); }
+});
+
+/* init */
+document.getElementById('idea').innerHTML=IDEA.prim;
+document.getElementById('legend').innerHTML=LEG.compute;
+renderChips(); build(); render();
+</script>
+</body>
+</html>
